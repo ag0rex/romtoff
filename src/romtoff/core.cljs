@@ -93,16 +93,16 @@
                                            :border "1px solid black"}
                                :onMouseMove (fn [e]
                                               (om/update! data [:mouse :prev] (get-in data [:mouse :current]))
-                                              (om/update! data [:mouse :current] [(.-pageX e) (.-pageY e)])
+                                              (om/update! data [:mouse :current] {:x (.-pageX e) :y (.-pageY e)})
 
                                               (when (get-in data [:mouse :down])
                                                 (let [{:keys [current prev]} (get data :mouse)
-                                                      dx (- (get current 0) (get prev 0))
-                                                      dy (- (get current 1) (get prev 1))]
+                                                      dx (- (current :x) (prev :x))
+                                                      dy (- (current :y) (prev :y))]
                                                   (tell :dude {:transact {:x (partial + dx) :y (partial + dy)}}))))
 
                                :onMouseDown (fn [e]
-                                              (om/update! data [:mouse :down] [(.-pageX e) (.-pageY e)]))
+                                              (om/update! data [:mouse :down] {:x (.-pageX e) :y (.-pageY e)}))
 
                                :onMouseUp #(om/update! data [:mouse :down] false)}
 

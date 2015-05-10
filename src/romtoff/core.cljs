@@ -48,22 +48,22 @@
     om/IWillMount
     (will-mount [_]
       (go (loop []
-            (let [{:keys [type content]} (<! ch)]
-              (case type
-                :tween (om/transact! data :tweens #(conj % content))
-                :update (om/transact! data #(merge % content))
-                :transact (doseq [[key fn] content]
-                            (om/transact! data key fn))))
+            (let [messages (<! ch)]
+              (doseq [[type content] messages]
+                     (case type
+                       :tween (om/transact! data :tweens #(conj % content))
+                       :update (om/transact! data #(merge % content))
+                       :transact (doseq [[key fn] content]
+                                   (om/transact! data key fn)))))
             (recur))))
     om/IRender
     (render [_]
       (dom/g #js {:dangerouslySetInnerHTML #js {:__html (str "<image width=\"64\" height=\"64\" x=\"" x "\" y=\"" y "\" xlink:href=\"img/dude.png\" />")}
                   :transform (str "rotate(" (if rotation rotation 0) " 82 82)")
                   :onClick (fn [_]
-                             (tell :dude {:type :tween
-                                          :content [:y {:target (+ y 50)
-                                                        :duration 30
-                                                        :easing :bounce-out}]}))}))))
+                             (tell :dude {:tween [:y {:target (+ y 50)
+                                                      :duration 30
+                                                      :easing :bounce-out}]}))}))))
 
 (om/root
   (fn [data owner]
@@ -74,19 +74,17 @@
 
       om/IRender
       (render [_]
-        (doall (map (fn [[id entity]]
-                      (doall (map (fn [[key {:keys [target duration easing progress initial] :as tween}]]
-                                    (if-not progress
-                                      (do
-                                        (om/update! tween :progress 0)
-                                        (om/update! tween :initial (get entity key)))
-                                      (do
-                                        (let [easing-fn (case easing :linear linear :cubic-out cubic-out :bounce-out bounce-out)]
-                                          (om/update! entity key (easing-fn initial target progress duration)))
-                                        (om/transact! tween :progress inc)
-                                        (if (= duration progress) (om/transact! entity :tweens #(dissoc % key))))))
-                                  (get entity :tweens))))
-                    (get data :entities)))
+        (doseq [[id entity] (get data :entities)]
+               (doseq [[key {:keys [target duration easing progress initial] :as tween}] (get entity :tweens)]
+                 (if-not progress
+                   (do
+                     (om/update! tween :progress 0)
+                     (om/update! tween :initial (get entity key)))
+                   (do
+                     (let [easing-fn (case easing :linear linear :cubic-out cubic-out :bounce-out bounce-out)]
+                       (om/update! entity key (easing-fn initial target progress duration)))
+                     (om/transact! tween :progress inc)
+                     (if (= duration progress) (om/transact! entity :tweens #(dissoc % key)))))))
 
         (dom/div nil
                  (dom/svg #js {:width 600
@@ -101,8 +99,7 @@
                                                 (let [{:keys [current prev]} (get data :mouse)
                                                       dx (- (get current 0) (get prev 0))
                                                       dy (- (get current 1) (get prev 1))]
-                                                  (tell :dude {:type :transact
-                                                               :content {:x (partial + dx) :y (partial + dy)}}))))
+                                                  (tell :dude {:transact {:x (partial + dx) :y (partial + dy)}}))))
 
                                :onMouseDown (fn [e]
                                               (om/update! data [:mouse :down] [(.-pageX e) (.-pageY e)]))

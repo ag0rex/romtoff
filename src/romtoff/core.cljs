@@ -51,7 +51,7 @@
             (let [messages (<! ch)]
               (doseq [[type content] messages]
                      (case type
-                       :tween (om/transact! data :tweens #(conj % content))
+                       :tween (om/transact! data :tweens #(merge % content))
                        :update (om/transact! data #(merge % content))
                        :transact (doseq [[key fn] content]
                                    (om/transact! data key fn)))))
@@ -104,7 +104,14 @@
                                :onMouseDown (fn [e]
                                               (om/update! data [:mouse :down] {:x (.-pageX e) :y (.-pageY e)}))
 
-                               :onMouseUp #(om/update! data [:mouse :down] false)}
+                               :onMouseUp (fn [e]
+                                            (om/update! data [:mouse :down] false)
+                                            (tell :dude {:tween {:y {:target (rand 400)
+                                                                     :duration 30
+                                                                     :easing :bounce-out}
+                                                                 :x {:target (rand 400)
+                                                                     :duration 60
+                                                                     :easing :cubic-out}}}))}
 
                           ;; (dom/circle #js {:cx 82
                           ;;                  :cy 82

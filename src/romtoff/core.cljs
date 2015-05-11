@@ -15,6 +15,8 @@
                           :entities {:dude {:ch (chan)
                                             :x 50
                                             :y 50
+                                            :animation {:frames ["img/dude.png" "img/dude-nosed.png"]
+                                                        :duration 10}
                                             :tweens {}}}}))
 
 (defn linear [i t p d]
@@ -58,12 +60,18 @@
             (recur))))
     om/IRender
     (render [_]
-      (dom/g #js {:dangerouslySetInnerHTML #js {:__html (str "<image width=\"64\" height=\"64\" x=\"" x "\" y=\"" y "\" xlink:href=\"img/dude.png\" />")}
-                  :transform (str "rotate(" (if rotation rotation 0) " 82 82)")
+      (dom/g #js {:dangerouslySetInnerHTML #js {:__html (str "<image width=\"64\" height=\"64\" x=\"" x "\" y=\"" y "\" xlink:href=\"" (get-in data [:animation :current]) "\" />")}
+                  :transform (str "rotate(" (if rotation rotation 0) " " (+ 32 x) " " (+ 32 y) ")")
                   :onClick (fn [_]
-                             (tell :dude {:tween [:y {:target (+ y 50)
+                             (tell :dude {:tween {:rotation {:target (+ rotation 360)
+                                                             :duration 30
+                                                             :easing :cubic-out}
+                                                  :y {:target (rand 400)
                                                       :duration 30
-                                                      :easing :bounce-out}]}))}))))
+                                                      :easing :bounce-out}
+                                                  :x {:target (rand 400)
+                                                      :duration 60
+                                                      :easing :cubic-out}}}))}))))
 
 (om/root
   (fn [data owner]
@@ -74,6 +82,7 @@
 
       om/IRender
       (render [_]
+        ;; Tween system.
         (doseq [[id entity] (get data :entities)]
                (doseq [[key {:keys [target duration easing progress initial] :as tween}] (get entity :tweens)]
                  (if-not progress
@@ -84,7 +93,22 @@
                      (let [easing-fn (case easing :linear linear :cubic-out cubic-out :bounce-out bounce-out)]
                        (om/update! entity key (easing-fn initial target progress duration)))
                      (om/transact! tween :progress inc)
-                     (if (= duration progress) (om/transact! entity :tweens #(dissoc % key)))))))
+                     (when (= duration progress) (om/transact! entity :tweens #(dissoc % key)))))))
+
+        ;; Animation system.
+        (doseq [[id entity] (get data :entities)]
+          (when-let [{:keys [frames duration progress current] :as animation} (:animation entity)]
+            (if-not progress
+              (do
+                (om/update! animation :progress 0)
+                (om/update! animation :current (first frames)))
+              (do
+                (om/transact! animation :progress inc)
+                (when (= duration progress)
+                  (om/update! animation :progress 0)
+                  (let [current-index (.indexOf (to-array frames) current)
+                        next-index (if (= (dec (count frames)) current-index) 0 (inc current-index))]
+                    (om/update! animation :current (get frames next-index))))))))
 
         (dom/div nil
                  (dom/svg #js {:width 600
@@ -105,13 +129,7 @@
                                               (om/update! data [:mouse :down] {:x (.-pageX e) :y (.-pageY e)}))
 
                                :onMouseUp (fn [e]
-                                            (om/update! data [:mouse :down] false)
-                                            (tell :dude {:tween {:y {:target (rand 400)
-                                                                     :duration 30
-                                                                     :easing :bounce-out}
-                                                                 :x {:target (rand 400)
-                                                                     :duration 60
-                                                                     :easing :cubic-out}}}))}
+                                            (om/update! data [:mouse :down] false))}
 
                           ;; (dom/circle #js {:cx 82
                           ;;                  :cy 82

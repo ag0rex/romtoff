@@ -2,8 +2,7 @@
     (:require-macros [cljs.core.async.macros :refer [go]])
     (:require [cljs.core.async :as async :refer [put! chan alts!]]
               [om.core :as om :include-macros true]
-              [om.dom :as dom :include-macros true]
-              [fipp.edn :as fipp]))
+              [om.dom :as dom :include-macros true]))
 
 (enable-console-print!)
 
@@ -15,7 +14,8 @@
                           :entities {:dude {:ch (chan)
                                             :x 50
                                             :y 50
-                                            :animation {:frames ["img/dude.png" "img/dude-nosed.png"]
+                                            :animation {:frames ["img/dude.png"
+                                                                 "img/dude-nosed.png"]
                                                         :duration 10}
                                             :tweens {}}}}))
 
@@ -82,6 +82,7 @@
 
       om/IRender
       (render [_]
+
         ;; Tween system.
         (doseq [[id entity] (get data :entities)]
                (doseq [[key {:keys [target duration easing progress initial] :as tween}] (get entity :tweens)]
@@ -114,7 +115,7 @@
                  (dom/svg #js {:width 600
                                :height 400
                                :style #js {:float "left"
-                                           :border "1px solid black"}
+                                           :border "1px solid lightgray"}
                                :onMouseMove (fn [e]
                                               (om/update! data [:mouse :prev] (get-in data [:mouse :current]))
                                               (om/update! data [:mouse :current] {:x (.-pageX e) :y (.-pageY e)})
@@ -131,21 +132,23 @@
                                :onMouseUp (fn [e]
                                             (om/update! data [:mouse :down] false))}
 
-                          ;; (dom/circle #js {:cx 82
-                          ;;                  :cy 82
-                          ;;                  :r 26
-                          ;;                  :fill "lightgreen"
-                          ;;                  :onMouseOver #(println "over")
-                          ;;                  :onMouseDown #(om/update! data [:moving] [(.-pageX %) (.-pageY %)])
-                          ;;                  :onMouseUp #(om/update! data [:moving] false)})
+                          (dom/rect #js {:x 0 :y 0
+                                         :width 600 :height 400
+                                         :style #js {:fill "rgb(250, 250, 200)"}})
 
                           (om/build dude (get-in data [:entities :dude])))
 
+                 ;; Inspector.
                  (dom/div #js {:style #js {:float "left"
                                            :width 400
                                            :height 400}}
+;;                          (prn-str data)
 
-                          (prn-str data))))))
+                          (let [data @data
+                                no-chan-map (reduce #(update-in %1 [:entities %2] dissoc :ch) data (keys (:entities data)))]
+                            (prn-str no-chan-map)
+                            (dom/pre nil
+                                     (.stringify js/JSON (clj->js no-chan-map) nil 4))))))))
   app-state
   {:target (. js/document (getElementById "app"))})
 

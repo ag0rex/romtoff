@@ -11,15 +11,7 @@
 ;; define your app data so that it doesn't get over-written on reload
 
 (defonce app-state (atom {:tick 0
-                          :entities {:dude {:ch (chan)
-                                            :x 50
-                                            :y 50
-                                            :animation {:frames ["img/dude.png"
-                                                                 "img/dude-nosed.png"]
-                                                        :duration 20}
-                                            :tweens {}}
-                                     :circle-1 {:ch (chan)
-                                                :tweens {}}}}))
+                          :entities {}}))
 
 (defn linear [i t p d]
   (let [s (/ p d)]
@@ -51,6 +43,7 @@
   (reify
     om/IWillMount
     (will-mount [_]
+      (println data)
       (go (loop []
             (let [messages (<! ch)]
               (doseq [[type content] messages]
@@ -93,7 +86,14 @@
       (when (not (seq (:tweens data)))
         (put! game-chan :falling-over))
 
-      (dom/circle #js {:cx x :cy y :r 25}))))
+      (dom/circle #js {:cx x :cy y :r 25
+                       :onClick (fn [_] (put! game-chan :create))}))))
+
+(defn from-default-entity [m]
+  (merge {:ch (chan) :tweens {}} m))
+
+(defn add-entity [data entity]
+  (om/transact! data :entities #(conj % entity)))
 
 (om/root
   (fn [data owner]
@@ -105,6 +105,13 @@
       om/IWillMount
       (will-mount [_]
         (js/setInterval #(om/transact! data :tick inc) 20)
+
+        (add-entity data [:dude (from-default-entity {:x 50
+                                                      :y 50
+                                                      :animation {:frames ["img/dude.png"
+                                                                           "img/dude-nosed.png"]
+                                                                  :duration 20}})])
+        (add-entity data [:circle-1 (from-default-entity {})])
 
         (let [game-chan (om/get-state owner :game-chan)]
           ;; Game channel.
@@ -179,10 +186,11 @@
                                          :width 600 :height 400
                                          :style #js {:fill "rgb(250, 250, 200)"}})
 
-                          ;; (om/build falling-circle (get-in data [:entities :circle-1]) {:init-state {:game-chan game-chan}})
+                          (when (get-in data [:entities :circle-1])
+                            (om/build falling-circle (get-in data [:entities :circle-1]) {:init-state {:game-chan game-chan}}))
 
-                          (om/build dude (get-in data [:entities :dude]))
-                          )
+                          (when (get-in data [:entities :dude])
+                            (om/build dude (get-in data [:entities :dude]))))
 
                  ;; Inspector.
                  (dom/div #js {:style #js {:float "left"

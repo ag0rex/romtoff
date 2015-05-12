@@ -2,7 +2,8 @@
     (:require-macros [cljs.core.async.macros :refer [go]])
     (:require [cljs.core.async :as async :refer [put! chan alts!]]
               [om.core :as om :include-macros true]
-              [om.dom :as dom :include-macros true]))
+              ;;[om.dom :as dom :include-macros true]
+              [om-tools.dom :as dom :include-macros true]))
 
 (enable-console-print!)
 
@@ -95,6 +96,13 @@
 (defn add-entity [data entity]
   (om/transact! data :entities #(conj % entity)))
 
+(defmulti builder
+  (fn [data owner] (:is data)))
+
+(defmethod builder :dude [data owner] (dude data owner))
+
+(defmethod builder :falling-circle [data owner] (falling-circle data owner))
+
 (om/root
   (fn [data owner]
     (reify
@@ -106,12 +114,14 @@
       (will-mount [_]
         (js/setInterval #(om/transact! data :tick inc) 20)
 
-        (add-entity data [:dude (from-default-entity {:x 50
+        (add-entity data [:dude (from-default-entity {:is :dude
+                                                      :x 50
                                                       :y 50
                                                       :animation {:frames ["img/dude.png"
                                                                            "img/dude-nosed.png"]
                                                                   :duration 20}})])
-        (add-entity data [:circle-1 (from-default-entity {})])
+
+        (add-entity data [:circle-1 (from-default-entity {:is :falling-circle})])
 
         (let [game-chan (om/get-state owner :game-chan)]
           ;; Game channel.
@@ -119,9 +129,23 @@
                 (let [msg (<! game-chan)]
                   (case msg
                     :falling-over (if (get @data :falling) (om/update! data :falling msg))
-                    :boo (println "baoeua")))
-
+                    :new-ball (add-entity data [:new-ball (from-default-entity {:is :falling-circle
+                                                                                :x 10
+                                                                                :y 10})])
+                    ))
                 (recur)))))
+
+      om/IDidMount
+      (did-mount [_]
+        (tell :circle-1 {:update {:x (rand 600)}
+                         :tween {:y {:target 800
+                                     :duration 30
+                                     :easing :bounce-out
+                                     }
+                                 :x {:target (rand 600)
+                                     :duration 60
+                                     :easing :cubic-out
+                                     :when-done :new-ball}}}))
 
       om/IRenderState
       (render-state [_ {:keys [game-chan]}]
@@ -156,16 +180,6 @@
                         next-index (if (= (dec (count frames)) current-index) 0 (inc current-index))]
                     (om/update! animation :current (get frames next-index))))))))
 
-        (when-not (:falling data)
-          (tell :circle-1 {:tween {:y {:target 400
-                                       :duration 30
-                                       :easing :bounce-out
-                                       :when-done :boo}
-                                   :x {:target (rand 400)
-                                       :duration 60
-                                       :easing :cubic-out}}})
-          (om/update! data :falling true))
-
         (dom/div nil
                  (dom/svg #js {:width 600
                                :height 800
@@ -191,11 +205,10 @@
                                          :width 600 :height 800
                                          :style #js {:fill "rgb(250, 250, 200)"}})
 
-                          (when (get-in data [:entities :circle-1])
-                            (om/build falling-circle (get-in data [:entities :circle-1]) {:init-state {:game-chan game-chan}}))
-
-                          (when (get-in data [:entities :dude])
-                            (om/build dude (get-in data [:entities :dude]))))
+                          (dom/g nil
+                                 (map (fn  [[id {:keys [is] :as entity}]]
+                                        (om/build builder entity {:init-state {:game-chan game-chan}}))
+                                      (get data :entities))))
 
                  ;; Inspector.
                  (dom/div #js {:style #js {:float "left"

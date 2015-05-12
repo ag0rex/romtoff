@@ -44,7 +44,6 @@
   (reify
     om/IWillMount
     (will-mount [_]
-      (println data)
       (go (loop []
             (let [messages (<! ch)]
               (doseq [[type content] messages]
@@ -129,10 +128,16 @@
                 (let [msg (<! game-chan)]
                   (case msg
                     :falling-over (if (get @data :falling) (om/update! data :falling msg))
-                    :new-ball (add-entity data [:new-ball (from-default-entity {:is :falling-circle
-                                                                                :x 10
-                                                                                :y 10})])
-                    ))
+                    :new-ball (add-entity data [(keyword (str "ball" (rand))) (from-default-entity {:is :falling-circle
+                                                                                                    :x (rand 600)
+                                                                                                    :y 0
+                                                                                                    :tweens {:y {:target 800
+                                                                                                                :duration 120
+                                                                                                                :easing :bounce-out}
+                                                                                                            :x {:target (rand 600)
+                                                                                                                :duration 60
+                                                                                                                :easing :cubic-out
+                                                                                                                :when-done :new-ball}}})])))
                 (recur)))))
 
       om/IDidMount

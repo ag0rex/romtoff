@@ -16,8 +16,10 @@
                                             :y 50
                                             :animation {:frames ["img/dude.png"
                                                                  "img/dude-nosed.png"]
-                                                        :duration 10}
-                                            :tweens {}}}}))
+                                                        :duration 20}
+                                            :tweens {}}
+                                     :circle-1 {:ch (chan)
+                                                :tweens {}}}}))
 
 (defn linear [i t p d]
   (let [s (/ p d)]
@@ -64,7 +66,7 @@
                   :transform (str "rotate(" (if rotation rotation 0) " " (+ 32 x) " " (+ 32 y) ")")
                   :onClick (fn [_]
                              (tell :dude {:tween {:rotation {:target (+ rotation 360)
-                                                             :duration 30
+                                                             :duration 300
                                                              :easing :cubic-out}
                                                   :y {:target (rand 400)
                                                       :duration 30
@@ -73,15 +75,47 @@
                                                       :duration 60
                                                       :easing :cubic-out}}}))}))))
 
+(defn falling-circle [{:keys [ch x y] :as data} owner]
+  (reify
+    om/IWillMount
+    (will-mount [_]
+      (go (loop []
+            (let [messages (<! ch)]
+              (doseq [[type content] messages]
+                (case type
+                  :tween (om/transact! data :tweens #(merge % content))
+                  :update (om/transact! data #(merge % content))
+                  :transact (doseq [[key fn] content]
+                              (om/transact! data key fn)))))
+            (recur))))
+    om/IRenderState
+    (render-state [_ {:keys [game-chan]}]
+      (when (not (seq (:tweens data)))
+        (put! game-chan :falling-over))
+
+      (dom/circle #js {:cx x :cy y :r 25}))))
+
 (om/root
   (fn [data owner]
     (reify
+      om/IInitState
+      (init-state [_]
+        {:game-chan (chan)})
+
       om/IWillMount
       (will-mount [_]
-        (js/setInterval #(om/transact! data :tick inc) 17))
+        (js/setInterval #(om/transact! data :tick inc) 20)
 
-      om/IRender
-      (render [_]
+        (let [game-chan (om/get-state owner :game-chan)]
+          ;; Game channel.
+          (go (loop []
+                (let [msg (<! game-chan)]
+                  (case msg
+                    :falling-over (if (get @data :falling) (om/update! data :falling msg))))
+                (recur)))))
+
+      om/IRenderState
+      (render-state [_ {:keys [game-chan]}]
 
         ;; Tween system.
         (doseq [[id entity] (get data :entities)]
@@ -111,6 +145,15 @@
                         next-index (if (= (dec (count frames)) current-index) 0 (inc current-index))]
                     (om/update! animation :current (get frames next-index))))))))
 
+        (when-not (:falling data)
+          (tell :circle-1 {:tween {:y {:target 400
+                                       :duration 30
+                                       :easing :bounce-out}
+                                   :x {:target (rand 400)
+                                       :duration 60
+                                       :easing :cubic-out}}})
+          (om/update! data :falling true))
+
         (dom/div nil
                  (dom/svg #js {:width 600
                                :height 400
@@ -136,7 +179,10 @@
                                          :width 600 :height 400
                                          :style #js {:fill "rgb(250, 250, 200)"}})
 
-                          (om/build dude (get-in data [:entities :dude])))
+                          ;; (om/build falling-circle (get-in data [:entities :circle-1]) {:init-state {:game-chan game-chan}})
+
+                          (om/build dude (get-in data [:entities :dude]))
+                          )
 
                  ;; Inspector.
                  (dom/div #js {:style #js {:float "left"

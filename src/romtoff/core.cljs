@@ -61,10 +61,10 @@
                              (tell :dude {:tween {:rotation {:target (+ rotation 360)
                                                              :duration 300
                                                              :easing :cubic-out}
-                                                  :y {:target (rand 400)
+                                                  :y {:target (rand 800)
                                                       :duration 30
                                                       :easing :bounce-out}
-                                                  :x {:target (rand 400)
+                                                  :x {:target (rand 600)
                                                       :duration 60
                                                       :easing :cubic-out}}}))}))))
 
@@ -118,7 +118,9 @@
           (go (loop []
                 (let [msg (<! game-chan)]
                   (case msg
-                    :falling-over (if (get @data :falling) (om/update! data :falling msg))))
+                    :falling-over (if (get @data :falling) (om/update! data :falling msg))
+                    :boo (println "baoeua")))
+
                 (recur)))))
 
       om/IRenderState
@@ -126,7 +128,7 @@
 
         ;; Tween system.
         (doseq [[id entity] (get data :entities)]
-               (doseq [[key {:keys [target duration easing progress initial] :as tween}] (get entity :tweens)]
+               (doseq [[key {:keys [target duration easing progress initial when-done] :as tween}] (get entity :tweens)]
                  (if-not progress
                    (do
                      (om/update! tween :progress 0)
@@ -135,7 +137,9 @@
                      (let [easing-fn (case easing :linear linear :cubic-out cubic-out :bounce-out bounce-out)]
                        (om/update! entity key (easing-fn initial target progress duration)))
                      (om/transact! tween :progress inc)
-                     (when (= duration progress) (om/transact! entity :tweens #(dissoc % key)))))))
+                     (when (= duration progress)
+                       (om/transact! entity :tweens #(dissoc % key))
+                       (when when-done (put! game-chan when-done)))))))
 
         ;; Animation system.
         (doseq [[id entity] (get data :entities)]
@@ -155,7 +159,8 @@
         (when-not (:falling data)
           (tell :circle-1 {:tween {:y {:target 400
                                        :duration 30
-                                       :easing :bounce-out}
+                                       :easing :bounce-out
+                                       :when-done :boo}
                                    :x {:target (rand 400)
                                        :duration 60
                                        :easing :cubic-out}}})
@@ -163,7 +168,7 @@
 
         (dom/div nil
                  (dom/svg #js {:width 600
-                               :height 400
+                               :height 800
                                :style #js {:float "left"
                                            :border "1px solid lightgray"}
                                :onMouseMove (fn [e]
@@ -183,7 +188,7 @@
                                             (om/update! data [:mouse :down] false))}
 
                           (dom/rect #js {:x 0 :y 0
-                                         :width 600 :height 400
+                                         :width 600 :height 800
                                          :style #js {:fill "rgb(250, 250, 200)"}})
 
                           (when (get-in data [:entities :circle-1])
@@ -195,7 +200,7 @@
                  ;; Inspector.
                  (dom/div #js {:style #js {:float "left"
                                            :width 400
-                                           :height 400}}
+                                           :height 800}}
 ;;                          (prn-str data)
 
                           (let [data @data

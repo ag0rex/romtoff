@@ -36,8 +36,11 @@
           (let [s (- s (/ 2.625 2.75))]
             (+ i (* c (+ 0.984375 (* s s 7.5625))))))))))
 
+(defn by-id [entity-id]
+  (first (filter #(= entity-id (:id %)) (:entities @app-state))))
+
 (defn tell [entity-id message]
-  (let [ch (:ch (first (filter #(= entity-id (:id %)) (:entities @app-state))))]
+  (let [ch (:ch (by-id entity-id))]
     (put! ch message)))
 
 (defn sprite [{:keys [x y rotation ch animation sprite height width] :as data} owner]
@@ -225,11 +228,9 @@
 
                           (let [data @data
                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
-                                no-chan-map (merge data {:entities no-chan-entities})
-                                ]
+                                no-chan-map (merge data {:entities no-chan-entities})]
                             (dom/pre nil
-                                     (.stringify js/JSON (clj->js no-chan-map) nil 4)))
-                          )))))
+                                     (.stringify js/JSON (clj->js no-chan-map) nil 4))))))))
   app-state
   {:target (. js/document (getElementById "app"))})
 

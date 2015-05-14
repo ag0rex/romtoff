@@ -2,7 +2,6 @@
     (:require-macros [cljs.core.async.macros :refer [go]])
     (:require [cljs.core.async :as async :refer [put! chan alts!]]
               [om.core :as om :include-macros true]
-              ;;[om.dom :as dom :include-macros true]
               [om-tools.dom :as dom :include-macros true]))
 
 (enable-console-print!)
@@ -43,7 +42,7 @@
   (let [ch (:ch (by-id entity-id))]
     (put! ch message)))
 
-(defn sprite [{:keys [x y rotation ch animation sprite height width] :as data} owner]
+(defn build-sprite [{:keys [x y rotation ch animation sprite height width] :as data} owner handlers]
   (reify
     om/IWillMount
     (will-mount [_]
@@ -59,14 +58,18 @@
     om/IRender
     (render [_]
       (let [img (if animation (:current animation) sprite)]
-        (dom/g #js {:dangerouslySetInnerHTML #js {:__html (str
-                                                           "<image width=\"" width
-                                                           "\" height=\"" height
-                                                           "\" x=\"" x
-                                                           "\" y=\"" y
-                                                           "\" xlink:href=\"" img "\" />")}
-                    :transform (str "rotate(" (if rotation rotation 0) " " (+ (/ width 2) x) " " (+ (/ height 2) y) ")")
-                    :onClick (fn [_] true)})))))
+        (dom/g (merge {:dangerouslySetInnerHTML #js {:__html (str
+                                                              "<image width=\"" width
+                                                              "\" height=\"" height
+                                                              "\" x=\"" x
+                                                              "\" y=\"" y
+                                                              "\" xlink:href=\"" img "\" />")}
+                       :transform (str "rotate(" (if rotation rotation 0) " " (+ (/ width 2) x) " " (+ (/ height 2) y) ")")
+                       }
+                      handlers))))))
+
+(defn block [{:keys [x y rotation ch animation sprite height width] :as data} owner]
+  (build-sprite data owner {:onClick (fn [_] (println x y))}))
 
 (defn falling-circle [{:keys [ch x y] :as data} owner]
   (reify
@@ -95,7 +98,9 @@
 (defmulti builder
   (fn [data owner] (:type data)))
 
-(defmethod builder :sprite [data owner] (sprite data owner))
+;; (defmethod builder :sprite [data owner] (sprite data owner))
+
+(defmethod builder :block [data owner] (block data owner))
 
 (defmethod builder :falling-circle [data owner] (falling-circle data owner))
 
@@ -123,10 +128,9 @@
 
         (doseq [r (range 6)
                 c (range 6)]
-          (println [r c])
           (let [id (keyword (str "block," r "," c))]
             (add-entity data (from-default-entity {:id id
-                                                   :type :sprite
+                                                   :type :block
                                                    :x (* r 62)
                                                    :y (* c 62)
                                                    :height 60

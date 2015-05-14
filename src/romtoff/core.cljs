@@ -13,6 +13,8 @@
 (defonce app-state (atom {:tick 0
                           :entities []}))
 
+(defonce game-chan (chan))
+
 (defn linear [i t p d]
   (let [s (/ p d)]
     (+ i (* (- t i) s))))
@@ -73,7 +75,7 @@
 (defn block [{:keys [x y rotation ch animation sprite height width] :as data} owner]
   (build-sprite data owner
                 {:onClick (fn [_] (println x y))}
-                {:boo (fn [_] (println "boo!!"))}))
+                {:boo (fn [_] (put! game-chan :boo))}))
 
 (defn falling-circle [{:keys [ch x y] :as data} owner]
   (reify
@@ -88,8 +90,8 @@
                   :transact (doseq [[key fn] content]
                               (om/transact! data key fn)))))
             (recur))))
-    om/IRenderState
-    (render-state [_ {:keys [game-chan]}]
+    om/IRender
+    (render [_]
       (dom/circle #js {:cx x :cy y :r 25
                        :onClick (fn [_] (put! game-chan :create))}))))
 
@@ -113,7 +115,7 @@
     (reify
       om/IInitState
       (init-state [_]
-        {:game-chan (chan)})
+        {:game-chan game-chan})
 
       om/IWillMount
       (will-mount [_]
@@ -134,7 +136,7 @@
                 c (range 6)]
           (let [id (keyword (str "block-" r "-" c))]
             (add-entity data (from-default-entity {:id id
-                                                   :type :sprite
+                                                   :type :block
                                                    :x (* r 62)
                                                    :y (* c 62)
                                                    :height 60

@@ -40,7 +40,7 @@
   (let [ch (get-in @app-state [:entities entity-id :ch])]
     (put! ch message)))
 
-(defn sprite [{:keys [x y rotation ch] :as data} owner]
+(defn sprite [{:keys [x y rotation ch animation sprite height width] :as data} owner]
   (reify
     om/IWillMount
     (will-mount [_]
@@ -55,9 +55,15 @@
             (recur))))
     om/IRender
     (render [_]
-      (dom/g #js {:dangerouslySetInnerHTML #js {:__html (str "<image width=\"64\" height=\"64\" x=\"" x "\" y=\"" y "\" xlink:href=\"" (get-in data [:animation :current]) "\" />")}
-                  :transform (str "rotate(" (if rotation rotation 0) " " (+ 32 x) " " (+ 32 y) ")")
-                  :onClick (fn [_] true)}))))
+      (let [img (if animation (:current animation) sprite)]
+        (dom/g #js {:dangerouslySetInnerHTML #js {:__html (str
+                                                           "<image width=\"" width
+                                                           "\" height=\"" height
+                                                           "\" x=\"" x
+                                                           "\" y=\"" y
+                                                           "\" xlink:href=\"" img "\" />")}
+                    :transform (str "rotate(" (if rotation rotation 0) " " (+ (/ width 2) x) " " (+ (/ height 2) y) ")")
+                    :onClick (fn [_] true)})))))
 
 (defn falling-circle [{:keys [ch x y] :as data} owner]
   (reify
@@ -101,12 +107,30 @@
       (will-mount [_]
         (js/setInterval #(om/transact! data :tick inc) 20)
 
-        (add-entity data [:dude (from-default-entity {:type :sprite
-                                                      :x 50
-                                                      :y 50
-                                                      :animation {:frames ["img/dude.png"
-                                                                           "img/dude-nosed.png"]
-                                                                  :duration 20}})])
+        ;; (add-entity data [:dude (from-default-entity {:id :dude
+        ;;                                               :type :sprite
+        ;;                                               :x 50
+        ;;                                               :y 50
+        ;;                                               :height 64
+        ;;                                               :width 64
+        ;;                                               :animation {:frames ["img/block.jpg"
+        ;;                                                                    "img/dude.png"
+        ;;                                                                    "img/dude-nosed.png"]
+        ;;                                                           :duration 20}})])
+
+        (doseq [r (range 6)
+                c (range 6)]
+          (println [r c])
+          (let [id (keyword (str "block," r "," c))]
+            (add-entity data [id
+                              (from-default-entity {:id id
+                                                    :type :sprite
+                                                    :x (* r 62)
+                                                    :y (* c 62)
+                                                    :height 60
+                                                    :width 60
+                                                    :sprite "img/block.jpg"})]))
+          )
 
         (add-entity data [:circle-1 (from-default-entity {:type :falling-circle})])
 
@@ -190,7 +214,7 @@
                                          :style #js {:fill "rgb(250, 250, 200)"}})
 
                           (dom/g nil
-                                 (map (fn  [[id {:keys [type] :as entity}]]
+                                 (map (fn [[id {:keys [type] :as entity}]]
                                         (om/build builder entity {:init-state {:game-chan game-chan}}))
                                       (get data :entities))))
 

@@ -40,7 +40,7 @@
   (let [ch (get-in @app-state [:entities entity-id :ch])]
     (put! ch message)))
 
-(defn dude [{:keys [x y rotation ch] :as data} owner]
+(defn sprite [{:keys [x y rotation ch] :as data} owner]
   (reify
     om/IWillMount
     (will-mount [_]
@@ -57,16 +57,7 @@
     (render [_]
       (dom/g #js {:dangerouslySetInnerHTML #js {:__html (str "<image width=\"64\" height=\"64\" x=\"" x "\" y=\"" y "\" xlink:href=\"" (get-in data [:animation :current]) "\" />")}
                   :transform (str "rotate(" (if rotation rotation 0) " " (+ 32 x) " " (+ 32 y) ")")
-                  :onClick (fn [_]
-                             (tell :dude {:tween {:rotation {:target (+ rotation 360)
-                                                             :duration 300
-                                                             :easing :cubic-out}
-                                                  :y {:target (rand 800)
-                                                      :duration 30
-                                                      :easing :bounce-out}
-                                                  :x {:target (rand 600)
-                                                      :duration 60
-                                                      :easing :cubic-out}}}))}))))
+                  :onClick (fn [_] true)}))))
 
 (defn falling-circle [{:keys [ch x y] :as data} owner]
   (reify
@@ -83,9 +74,6 @@
             (recur))))
     om/IRenderState
     (render-state [_ {:keys [game-chan]}]
-      (when (not (seq (:tweens data)))
-        (put! game-chan :falling-over))
-
       (dom/circle #js {:cx x :cy y :r 25
                        :onClick (fn [_] (put! game-chan :create))}))))
 
@@ -96,9 +84,9 @@
   (om/transact! data :entities #(conj % entity)))
 
 (defmulti builder
-  (fn [data owner] (:is data)))
+  (fn [data owner] (:type data)))
 
-(defmethod builder :dude [data owner] (dude data owner))
+(defmethod builder :sprite [data owner] (sprite data owner))
 
 (defmethod builder :falling-circle [data owner] (falling-circle data owner))
 
@@ -113,31 +101,22 @@
       (will-mount [_]
         (js/setInterval #(om/transact! data :tick inc) 20)
 
-        (add-entity data [:dude (from-default-entity {:is :dude
+        (add-entity data [:dude (from-default-entity {:type :sprite
                                                       :x 50
                                                       :y 50
                                                       :animation {:frames ["img/dude.png"
                                                                            "img/dude-nosed.png"]
                                                                   :duration 20}})])
 
-        (add-entity data [:circle-1 (from-default-entity {:is :falling-circle})])
+        (add-entity data [:circle-1 (from-default-entity {:type :falling-circle})])
 
         (let [game-chan (om/get-state owner :game-chan)]
           ;; Game channel.
           (go (loop []
                 (let [msg (<! game-chan)]
                   (case msg
-                    :falling-over (if (get @data :falling) (om/update! data :falling msg))
-                    :new-ball (add-entity data [(keyword (str "ball" (rand))) (from-default-entity {:is :falling-circle
-                                                                                                    :x (rand 600)
-                                                                                                    :y 0
-                                                                                                    :tweens {:y {:target 800
-                                                                                                                :duration 120
-                                                                                                                :easing :bounce-out}
-                                                                                                            :x {:target (rand 600)
-                                                                                                                :duration 60
-                                                                                                                :easing :cubic-out
-                                                                                                                :when-done :new-ball}}})])))
+                    ;; :message action
+                    (println (prn-str msg))))
                 (recur)))))
 
       om/IDidMount
@@ -211,7 +190,7 @@
                                          :style #js {:fill "rgb(250, 250, 200)"}})
 
                           (dom/g nil
-                                 (map (fn  [[id {:keys [is] :as entity}]]
+                                 (map (fn  [[id {:keys [type] :as entity}]]
                                         (om/build builder entity {:init-state {:game-chan game-chan}}))
                                       (get data :entities))))
 

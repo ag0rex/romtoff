@@ -12,7 +12,7 @@
 ;; define your app data so that it doesn't get over-written on reload
 
 (defonce app-state (atom {:tick 0
-                          :entities {}}))
+                          :entities []}))
 
 (defn linear [i t p d]
   (let [s (/ p d)]
@@ -37,7 +37,7 @@
             (+ i (* c (+ 0.984375 (* s s 7.5625))))))))))
 
 (defn tell [entity-id message]
-  (let [ch (get-in @app-state [:entities entity-id :ch])]
+  (let [ch (:ch (first (filter #(= entity-id (:id %)) (:entities @app-state))))]
     (put! ch message)))
 
 (defn sprite [{:keys [x y rotation ch animation sprite height width] :as data} owner]
@@ -122,17 +122,16 @@
                 c (range 6)]
           (println [r c])
           (let [id (keyword (str "block," r "," c))]
-            (add-entity data [id
-                              (from-default-entity {:id id
-                                                    :type :sprite
-                                                    :x (* r 62)
-                                                    :y (* c 62)
-                                                    :height 60
-                                                    :width 60
-                                                    :sprite "img/block.jpg"})]))
-          )
+            (add-entity data (from-default-entity {:id id
+                                                   :type :sprite
+                                                   :x (* r 62)
+                                                   :y (* c 62)
+                                                   :height 60
+                                                   :width 60
+                                                   :sprite "img/block.jpg"}))))
 
-        (add-entity data [:circle-1 (from-default-entity {:type :falling-circle})])
+        (add-entity data (from-default-entity {:id :circle-1
+                                               :type :falling-circle}))
 
         (let [game-chan (om/get-state owner :game-chan)]
           ;; Game channel.
@@ -159,7 +158,7 @@
       (render-state [_ {:keys [game-chan]}]
 
         ;; Tween system.
-        (doseq [[id entity] (get data :entities)]
+        (doseq [entity (get data :entities)]
                (doseq [[key {:keys [target duration easing progress initial when-done] :as tween}] (get entity :tweens)]
                  (if-not progress
                    (do
@@ -174,7 +173,7 @@
                        (when when-done (put! game-chan when-done)))))))
 
         ;; Animation system.
-        (doseq [[id entity] (get data :entities)]
+        (doseq [entity (get data :entities)]
           (when-let [{:keys [frames duration progress current] :as animation} (:animation entity)]
             (if-not progress
               (do
@@ -214,7 +213,7 @@
                                          :style #js {:fill "rgb(250, 250, 200)"}})
 
                           (dom/g nil
-                                 (map (fn [[id {:keys [type] :as entity}]]
+                                 (map (fn [{:keys [type] :as entity}]
                                         (om/build builder entity {:init-state {:game-chan game-chan}}))
                                       (get data :entities))))
 
@@ -225,10 +224,12 @@
 ;;                          (prn-str data)
 
                           (let [data @data
-                                no-chan-map (reduce #(update-in %1 [:entities %2] dissoc :ch) data (keys (:entities data)))]
-                            (prn-str no-chan-map)
+                                no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
+                                no-chan-map (merge data {:entities no-chan-entities})
+                                ]
                             (dom/pre nil
-                                     (.stringify js/JSON (clj->js no-chan-map) nil 4))))))))
+                                     (.stringify js/JSON (clj->js no-chan-map) nil 4)))
+                          )))))
   app-state
   {:target (. js/document (getElementById "app"))})
 

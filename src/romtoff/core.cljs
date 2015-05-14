@@ -42,18 +42,18 @@
   (let [ch (:ch (by-id entity-id))]
     (put! ch message)))
 
-(defn build-sprite [{:keys [x y rotation ch animation sprite height width] :as data} owner handlers]
+(defn build-sprite [{:keys [x y rotation ch animation sprite height width] :as data} owner event-handlers message-handlers]
   (reify
     om/IWillMount
     (will-mount [_]
       (go (loop []
-            (let [messages (<! ch)]
+            (let [messages (<! ch)
+                  handlers (merge {:tween (fn [content] (om/transact! data :tweens #(merge % content)))
+                                   :update (fn [content] (om/transact! data #(merge % content)))
+                                   :transact (fn [content] (doseq [[key fn] content] (om/transact! data key fn)))}
+                                  message-handlers)]
               (doseq [[type content] messages]
-                     (case type
-                       :tween (om/transact! data :tweens #(merge % content))
-                       :update (om/transact! data #(merge % content))
-                       :transact (doseq [[key fn] content]
-                                   (om/transact! data key fn)))))
+                ((handlers type) content)))
             (recur))))
     om/IRender
     (render [_]
@@ -66,10 +66,12 @@
                                                               "\" xlink:href=\"" img "\" />")}
                        :transform (str "rotate(" (if rotation rotation 0) " " (+ (/ width 2) x) " " (+ (/ height 2) y) ")")
                        }
-                      handlers))))))
+                      event-handlers))))))
 
 (defn block [{:keys [x y rotation ch animation sprite height width] :as data} owner]
-  (build-sprite data owner {:onClick (fn [_] (println x y))}))
+  (build-sprite data owner
+                {:onClick (fn [_] (println x y))}
+                {:boo (fn [_] (println "boo!!"))}))
 
 (defn falling-circle [{:keys [ch x y] :as data} owner]
   (reify
@@ -128,7 +130,7 @@
 
         (doseq [r (range 6)
                 c (range 6)]
-          (let [id (keyword (str "block," r "," c))]
+          (let [id (keyword (str "block-" r "-" c))]
             (add-entity data (from-default-entity {:id id
                                                    :type :block
                                                    :x (* r 62)
@@ -151,6 +153,7 @@
 
       om/IDidMount
       (did-mount [_]
+        (tell :block-0-0 {:boo true})
         (tell :circle-1 {:update {:x (rand 600)}
                          :tween {:y {:target 800
                                      :duration 30
@@ -207,7 +210,9 @@
                                                 (let [{:keys [current prev]} (get data :mouse)
                                                       dx (- (current :x) (prev :x))
                                                       dy (- (current :y) (prev :y))]
-                                                  (tell :dude {:transact {:x (partial + dx) :y (partial + dy)}}))))
+                                                  (do
+                                                    ;; Drag.
+                                                    ))))
 
                                :onMouseDown (fn [e]
                                               (om/update! data [:mouse :down] {:x (.-pageX e) :y (.-pageY e)}))

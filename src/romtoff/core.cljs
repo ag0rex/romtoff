@@ -74,7 +74,10 @@
 
 (defn block [{:keys [x y rotation ch animation sprite height width] :as data} owner]
   (build-sprite data owner
-                {:onClick (fn [_] (println x y))}
+                {:onClick (fn [_]
+                            (println x y)
+                            (put! game-chan :booauaoeu)
+                            "")}
                 {:boo (fn [_] (put! game-chan :boo))}))
 
 (defn falling-circle [{:keys [ch x y] :as data} owner]
@@ -93,7 +96,7 @@
     om/IRender
     (render [_]
       (dom/circle #js {:cx x :cy y :r 25
-                       :onClick (fn [_] (put! game-chan :create))}))))
+                       :onClick (fn [_] (put! game-chan :create) "")}))))
 
 (defn from-default-entity [m]
   (merge {:ch (chan) :tweens {}} m))

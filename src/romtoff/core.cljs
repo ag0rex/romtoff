@@ -42,7 +42,7 @@
   (let [ch (:ch (by-id entity-id))]
     (put! ch message)))
 
-(defn build-sprite [{:keys [x y rotation ch animation sprite height width] :as data} owner event-handlers message-handlers]
+(defn build-sprite [{:keys [id x y rotation ch animation sprite height width] :as data} owner event-handlers message-handlers]
   (reify
     om/IWillMount
     (will-mount [_]
@@ -53,7 +53,10 @@
                                    :transact (fn [content] (doseq [[key fn] content] (om/transact! data key fn)))}
                                   message-handlers)]
               (doseq [[type content] messages]
-                ((handlers type) content)))
+                (let [handler (handlers type)]
+                  (if handler
+                    (handler content)
+                    (.warn js/console (str id ": Missing message handler for " type))))))
             (recur))))
     om/IRender
     (render [_]
@@ -64,8 +67,7 @@
                                                               "\" x=\"" x
                                                               "\" y=\"" y
                                                               "\" xlink:href=\"" img "\" />")}
-                       :transform (str "rotate(" (if rotation rotation 0) " " (+ (/ width 2) x) " " (+ (/ height 2) y) ")")
-                       }
+                       :transform (str "rotate(" (if rotation rotation 0) " " (+ (/ width 2) x) " " (+ (/ height 2) y) ")")}
                       event-handlers))))))
 
 (defn block [{:keys [x y rotation ch animation sprite height width] :as data} owner]
@@ -100,7 +102,7 @@
 (defmulti builder
   (fn [data owner] (:type data)))
 
-;; (defmethod builder :sprite [data owner] (sprite data owner))
+(defmethod builder :sprite [data owner] (build-sprite data owner {} {}))
 
 (defmethod builder :block [data owner] (block data owner))
 
@@ -132,7 +134,7 @@
                 c (range 6)]
           (let [id (keyword (str "block-" r "-" c))]
             (add-entity data (from-default-entity {:id id
-                                                   :type :block
+                                                   :type :sprite
                                                    :x (* r 62)
                                                    :y (* c 62)
                                                    :height 60
@@ -148,7 +150,7 @@
                 (let [msg (<! game-chan)]
                   (case msg
                     ;; :message action
-                    (println (prn-str msg))))
+                    (.warn js/console (str "Game: Missing message handler for " msg))))
                 (recur)))))
 
       om/IDidMount

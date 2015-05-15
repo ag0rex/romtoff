@@ -204,6 +204,15 @@
       (will-mount [_]
         (js/setInterval #(om/transact! data :tick inc) 10)
 
+
+        (add-entity data (from-default-entity {:id :map
+                                               :type :sprite
+                                               :height 910
+                                               :width 630
+                                               :x 0
+                                               :y 0
+                                               :sprite "img/map_1.png"}))
+
         (doseq [r (range ROWS)
                 c (range COLS)]
           (let [id (block-id r c)]

@@ -128,7 +128,9 @@
                                                                      :easing :cubic-out}
                                                                  :y {:target 1000
                                                                      :duration 10
-                                                                     :easing :cubic-out}}})))
+                                                                     :easing :cubic-out}}}))
+                              (doseq [coords (tetrimino-coords tetrimino (block-coords id))]
+                                (put! game-chan {:zero-block {:coords coords}})))
                             (put! game-chan {:gen-next-tetrimino {}})
                             "")}
                 {:boo (fn [_] (put! game-chan {:boo {}}))}))
@@ -166,6 +168,14 @@
 
 (defmethod builder :falling-circle [data owner] (falling-circle data owner))
 
+(defn ones [r c]
+  (let [row (vec (map (constantly 1) (range r)))
+        m (vec (map (constantly row) (range c)))]
+    m))
+
+(def ROWS 13)
+(def COLS 9)
+
 (om/root
   (fn [data owner]
     (reify
@@ -177,19 +187,8 @@
       (will-mount [_]
         (js/setInterval #(om/transact! data :tick inc) 10)
 
-        ;; (add-entity data [:dude (from-default-entity {:id :dude
-        ;;                                               :type :sprite
-        ;;                                               :x 50
-        ;;                                               :y 50
-        ;;                                               :height 64
-        ;;                                               :width 64
-        ;;                                               :animation {:frames ["img/block.jpg"
-        ;;                                                                    "img/dude.png"
-        ;;                                                                    "img/dude-nosed.png"]
-        ;;                                                           :duration 20}})])
-
-        (doseq [r (range 13)
-                c (range 9)]
+        (doseq [r (range ROWS)
+                c (range COLS)]
           (let [id (block-id r c)]
             (add-entity data (from-default-entity {:id id
                                                    :type :block
@@ -198,6 +197,8 @@
                                                    :height 70
                                                    :width 70
                                                    :sprite "img/block.jpg"}))))
+
+        (om/update! data :clouds (ones COLS ROWS))
 
         (add-entity data (from-default-entity {:id :circle-1
                                                :type :falling-circle}))
@@ -210,6 +211,7 @@
                     (println type)
                     (case type
                       :gen-next-tetrimino (om/update! data :next-tetrimino (rand-nth tetriminos))
+                      :zero-block (om/transact! data :clouds #(assoc-in % (:coords contents) 0))
                       ;; :message action
                       (.warn js/console (str "Game: Missing message handler for " type)))))
                 (recur)))))
@@ -304,7 +306,7 @@
                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
                                 no-chan-map (merge data {:entities no-chan-entities})]
                             (dom/pre nil
-                                     (.stringify js/JSON (clj->js (:next-tetrimino no-chan-map)) nil 4))))))))
+                                     (.stringify js/JSON (clj->js no-chan-map) nil 4))))))))
   app-state
   {:target (. js/document (getElementById "app"))})
 

@@ -181,6 +181,19 @@
                 {:onClick (fn [_] (println id))}
                 {}))
 
+(defn arrow [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
+  (build-sprite data owner
+                {:onClick (fn [_]
+                            (put! game-chan {:clear-selection {}})
+
+                            (let
+                                [t (get @app-state :next-tetrimino)
+                                 c (block-coords id)
+                                 tetrimino-blocks-coords (tetrimino-coords t c)]
+                              (println tetrimino-blocks-coords))
+                            (println id))}
+                {}))
+
 (defn falling-circle [{:keys [ch x y] :as data} owner]
   (reify
     om/IWillMount
@@ -216,7 +229,7 @@
 
 (defmethod builder :water [data owner] (land data owner))
 
-(defmethod builder :arrow [data owner] (build-sprite data owner {} {}))
+(defmethod builder :arrow [data owner] (arrow data owner))
 
 (defmethod builder :falling-circle [data owner] (falling-circle data owner))
 
@@ -333,7 +346,7 @@
                                                    (when (every? #(in-bounds %) tetrimino-blocks-coords)
 
                                                      (doseq [[r c :as tbc] tetrimino-blocks-coords]
-                                                       (add-entity data (from-default-entity {:id (keyword (str "arrow" r c))
+                                                       (add-entity data (from-default-entity {:id (keyword (str "arrow-" r "-" c))
                                                                                               :type :arrow
                                                                                               :x (* c 70)
                                                                                               :y (* r 70)

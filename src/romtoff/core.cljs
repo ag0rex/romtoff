@@ -60,6 +60,9 @@
 (defn in-bounds [[r c]]
   (and (< r ROWS) (< c COLS)))
 
+(defn covered [[r c]]
+  (= 1 (get-in @app-state [:clouds r c])))
+
 (defn tetrimino-coords [t [x y]]
   (let [all-tiles (for [r (range (count t))
                         c (range (count (first t)))] [r c])]
@@ -124,27 +127,31 @@
                                "")
                  :onMouseOver (fn [_]
                                 (let [tetrimino (get @app-state :next-tetrimino)
-                                      tetrimino-coords (tetrimino-coords tetrimino (block-coords id))]
-                                  (when (every? #(in-bounds %) tetrimino-coords)
+                                      tetrimino-blocks-coords (tetrimino-coords tetrimino (block-coords id))]
+                                  (when (and (every? #(in-bounds %) tetrimino-blocks-coords)
+                                             (every? #(covered %) tetrimino-blocks-coords))
 
-                                    (println tetrimino-coords)
+                                    (println tetrimino-blocks-coords)
 
                                     (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
                                       (tell affected-block-id {:update {:sprite "img/block-over.jpg"}}))))
                                 "")
                  :onClick (fn [_]
-                            (let [tetrimino (get @app-state :next-tetrimino)]
-                              (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
-                                (tell affected-block-id {:tween {:x {:target 550
-                                                                     :duration 10
-                                                                     :easing :cubic-out}
-                                                                 :y {:target 1000
-                                                                     :duration 10
-                                                                     :easing :cubic-out}}}))
-                              (doseq [coords (tetrimino-coords tetrimino (block-coords id))]
-                                (println coords)
-                                (put! game-chan {:zero-block {:coords coords}})))
-                            (put! game-chan {:gen-next-tetrimino {}})
+                            (let [tetrimino (get @app-state :next-tetrimino)
+                                  tetrimino-blocks-coords (tetrimino-coords tetrimino (block-coords id))]
+                              (when (and (every? #(in-bounds %) tetrimino-blocks-coords)
+                                         (every? #(covered %) tetrimino-blocks-coords))
+                                (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
+                                  (tell affected-block-id {:tween {:x {:target 550
+                                                                       :duration 10
+                                                                       :easing :cubic-out}
+                                                                   :y {:target 1000
+                                                                       :duration 10
+                                                                       :easing :cubic-out}}}))
+                                (doseq [coords (tetrimino-coords tetrimino (block-coords id))]
+                                  (println coords)
+                                  (put! game-chan {:zero-block {:coords coords}})))
+                              (put! game-chan {:gen-next-tetrimino {}}))
                             "")}
                 {:boo (fn [_] (put! game-chan {:boo {}}))}))
 

@@ -44,10 +44,6 @@
   (let [ch (:ch (by-id entity-id))]
     (put! ch message)))
 
-(def tetrimino [[1 0]
-                [0 1]
-                [1 0]])
-
 (def tetriminos [[[1]]
 
                  [[1 1]]
@@ -63,7 +59,7 @@
     ;; (println all-tiles)
     (reduce (fn [acc [r c]]
               ;; (println r c (get-in tetrimino [r c]))
-              (if (= 1 (get-in tetrimino [r c]))
+              (if (= 1 (get-in t [r c]))
                 (conj acc [(+ x r) (+ y c)])
                 acc))
             [] all-tiles)))
@@ -79,8 +75,6 @@
 
 (defn block-ids-by-tetrimino-and-block-id [tetrimino id]
   (map (comp :id block-by-coords) (tetrimino-coords tetrimino (block-coords id))))
-
-(println (tetrimino-coords tetrimino [1 1]))
 
 (defn build-sprite [{:keys [id x y rotation ch animation sprite height width] :as data} owner event-handlers message-handlers]
   (reify
@@ -115,25 +109,27 @@
 (defn block [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
   (build-sprite data owner
                 {:onMouseOut (fn [_]
-                               (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
-                                 (tell affected-block-id {:update {:sprite "img/block.jpg"}}))
+                               (let [tetrimino (get @app-state :next-tetrimino)]
+                                 (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
+                                   (tell affected-block-id {:update {:sprite "img/block.jpg"}})))
                                (println "Out" id)
                                ;; (tell id {:update {:sprite "img/block.jpg"}})
                                "")
                  :onMouseOver (fn [_]
-                                (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
-                                  (tell affected-block-id {:update {:sprite "img/block-over.jpg"}}))
+                                (let [tetrimino (get @app-state :next-tetrimino)]
+                                  (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
+                                    (tell affected-block-id {:update {:sprite "img/block-over.jpg"}})))
                                 "")
                  :onClick (fn [_]
-                            (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
-                              (tell affected-block-id {:tween {:x {:target 550
-                                                                   :duration 10
-                                                                   :easing :cubic-out}
-                                                               :y {:target 1000
-                                                                   :duration 10
-                                                                   :easing :cubic-out}}}))
-
-                            (put! game-chan :booauaoeu)
+                            (let [tetrimino (get @app-state :next-tetrimino)]
+                              (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
+                                (tell affected-block-id {:tween {:x {:target 550
+                                                                     :duration 10
+                                                                     :easing :cubic-out}
+                                                                 :y {:target 1000
+                                                                     :duration 10
+                                                                     :easing :cubic-out}}})))
+                            (put! game-chan [:gen-next-tetrimino {}])
                             "")}
                 {:boo (fn [_] (put! game-chan :boo))}))
 
@@ -209,10 +205,11 @@
         (let [game-chan (om/get-state owner :game-chan)]
           ;; Game channel.
           (go (loop []
-                (let [msg (<! game-chan)]
-                  (case msg
+                (let [[type contents] (<! game-chan)]
+                  (case type
+                    :gen-next-tetrimino (om/update! data :next-tetrimino (rand-nth tetriminos))
                     ;; :message action
-                    (.warn js/console (str "Game: Missing message handler for " msg))))
+                    (.warn js/console (str "Game: Missing message handler for " type))))
                 (recur)))))
 
       om/IDidMount
@@ -228,8 +225,7 @@
                                      :easing :cubic-out
                                      :when-done :new-ball}}})
 
-        (om/update! data :next)
-        )
+        (om/update! data :next-tetrimino (rand-nth tetriminos)))
 
       om/IRenderState
       (render-state [_ {:keys [game-chan]}]
@@ -247,7 +243,7 @@
                      (om/transact! tween :progress inc)
                      (when (= duration progress)
                        (om/transact! entity :tweens #(dissoc % key))
-                       (when when-done (put! game-chan when-done)))))))
+                       (when when-done (put! game-chan [when-done {}])))))))
 
         ;; Animation system.
         (doseq [entity (get data :entities)]

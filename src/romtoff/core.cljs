@@ -126,7 +126,9 @@
                                 (let [tetrimino (get @app-state :next-tetrimino)
                                       tetrimino-coords (tetrimino-coords tetrimino (block-coords id))]
                                   (when (every? #(in-bounds %) tetrimino-coords)
+
                                     (println tetrimino-coords)
+
                                     (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
                                       (tell affected-block-id {:update {:sprite "img/block-over.jpg"}}))))
                                 "")
@@ -206,7 +208,7 @@
                                                    :width 70
                                                    :sprite "img/block.jpg"}))))
 
-        (om/update! data :clouds (ones (dec COLS) (dec ROWS)))
+        (om/update! data :clouds (ones COLS ROWS))
 
         (add-entity data (from-default-entity {:id :circle-1
                                                :type :falling-circle}))

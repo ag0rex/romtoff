@@ -221,9 +221,23 @@
 ;;                 {:boo (fn [_] (put! game-chan {:boo {}}))}))
 
 (def stage->sprite
-  {0 "img/tiles_0001_full4.png"
-   1 "img/tiles_0004_full2.png"
-   2 "img/tiles_0003_full1.png"})
+  {0 "img/1.png"
+   1 "img/2.png"
+   2 "img/3.png"})
+
+(def int->sprite
+  {
+   0 "img/0.png"
+   1 "img/1.png"
+   2 "img/2.png"
+   3 "img/3.png"
+   4 "img/4.png"
+   5 "img/5.png"
+   6 "img/6.png"
+   7 "img/7.png"
+   8 "img/8.png"
+   9 "img/9.png"
+   })
 
 (defn land [{:keys [id x y rotation ch animation sprite height width stage] :as data} owner]
   (build-sprite data owner
@@ -234,7 +248,7 @@
                                  (case stage
                                    0 (do (tell id {:update {:sprite (stage->sprite 1) :stage 1}})
                                          (play-sound "crateLand"))
-                                   1 (do (tell id {:update {:sprite (stage->sprite 2) :stage 2}})
+                                   1 (do (tell id {:update {:sprite (stage->sprite 0) :stage 0}})
                                          (play-sound "crateDrop"))
                                    2 (do (tell id {:update {:sprite (stage->sprite 0) :stage 0}})
                                          (play-sound "rockDestroy"))))
@@ -350,8 +364,53 @@
    [0 0 1 1 1 1 1 0 0]
    [0 0 0 0 1 0 0 0 0]])
 
+(def level-3
+  [[9 5 5 6 6 6 5 5 8]
+   [0 0 0 1 1 1 0 0 0]
+   [0 0 1 1 1 1 1 0 0]
+   [0 1 1 0 1 0 1 1 0]
+   [0 1 1 0 1 0 1 1 0]
+   [0 0 1 1 1 1 1 0 0]
+   [0 0 0 1 1 1 0 0 0]
+   [0 0 0 0 1 0 0 0 0]
+   [0 0 0 0 1 0 0 0 0]
+   [0 0 0 0 1 0 0 0 0]
+   [0 0 0 0 1 0 0 0 0]
+   [0 0 0 0 1 0 0 0 0]
+   [0 0 0 1 1 1 0 0 0]])
+
+(def level-4
+  [[9 5 5 6 6 6 5 5 8]
+   [0 0 0 0 0 0 0 0 0]
+   [0 0 0 0 1 0 0 0 0]
+   [0 1 0 1 1 1 0 1 0]
+   [0 1 1 0 1 0 1 1 0]
+   [0 1 1 1 1 1 1 1 0]
+   [0 1 1 1 1 1 1 1 0]
+   [0 0 0 1 1 1 0 0 0]
+   [0 0 0 1 1 1 0 0 0]
+   [0 0 0 0 1 0 0 0 0]
+   [0 0 0 0 1 0 0 0 0]
+   [0 0 0 0 1 0 0 0 0]
+   [0 0 0 0 0 0 0 0 0]])
+
+(def level-5
+  [[9 5 5 6 6 6 5 5 8]
+   [0 0 0 0 0 0 0 0 0]
+   [0 0 0 0 0 0 0 0 0]
+   [0 0 0 1 1 1 0 0 0]
+   [0 0 1 1 1 1 1 0 0]
+   [0 1 0 0 1 0 0 1 0]
+   [0 1 1 1 1 1 1 1 0]
+   [0 1 1 1 0 1 1 1 0]
+   [0 0 1 1 1 1 1 0 0]
+   [0 0 0 1 1 1 0 0 0]
+   [0 0 0 1 0 1 0 0 0]
+   [0 0 0 0 0 0 0 0 0]
+   [0 0 0 0 0 0 0 0 0]])
+
 (defn is-land [r c level]
-  (= 1 (get-in level [r c])))
+  (contains? #{1 2 3 4} (get-in level [r c])))
 
 (def X-OFFSET 8)
 (def Y-OFFSET 8)
@@ -369,7 +428,7 @@
       (will-mount [_]
         (js/setInterval #(om/transact! data :tick inc) 34)
 
-        (let [level level-2]
+        (let [level level-4]
           (doseq [r (range (count level))
                   c (range (count (first level)))]
             (if (is-land r c level)
@@ -388,7 +447,7 @@
                                                      :y (* r 70)
                                                      :height 70
                                                      :width 69
-                                                     :sprite "img/tiles_0000_full41-copy-2.png"})))))
+                                                     :sprite (int->sprite (get-in level [r c]))})))))
 
         (add-entity data (from-default-entity {:id :rotate-button
                                                :type :rotate-button
@@ -446,10 +505,10 @@
                                                      (doseq [[r c :as tbc] tetrimino-blocks-coords]
                                                        (add-entity data (from-default-entity {:id (keyword (str "arrow-" r "-" c))
                                                                                               :type :arrow
-                                                                                              :x (* c 70)
+                                                                                              :x (* c 69)
                                                                                               :y (* r 70)
                                                                                               :height 70
-                                                                                              :width 70
+                                                                                              :width 69
                                                                                               :sprite "img/sageata.png"}))))
                                                    ;; (println tetrimino-blocks-coords)
                                                    )))
@@ -484,7 +543,7 @@
                          ;; (music-on)
                          (sound-off)
                          (sound-on))
-                       1000))
+                       2000))
 
       om/IRenderState
       (render-state [_ {:keys [game-chan]}]

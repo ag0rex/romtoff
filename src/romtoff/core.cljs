@@ -46,8 +46,16 @@
 
 (def tetrimino [[1 0]
                 [0 1]
-                [1 0]
-                ])
+                [1 0]])
+
+(def tetriminos [[[1]]
+
+                 [[1 1]]
+
+                 [[1 1 1]]
+
+                 [[1 1]
+                  [1 0]]])
 
 (defn tetrimino-coords [t [x y]]
   (let [all-tiles (for [r (range (count t))
@@ -123,8 +131,7 @@
                                                                    :easing :cubic-out}
                                                                :y {:target 1000
                                                                    :duration 10
-                                                                   :easing :cubic-out}}})
-                              )
+                                                                   :easing :cubic-out}}}))
 
                             (put! game-chan :booauaoeu)
                             "")}
@@ -185,15 +192,15 @@
         ;;                                                                    "img/dude-nosed.png"]
         ;;                                                           :duration 20}})])
 
-        (doseq [r (range 11)
-                c (range 8)]
+        (doseq [r (range 13)
+                c (range 9)]
           (let [id (block-id r c)]
             (add-entity data (from-default-entity {:id id
                                                    :type :block
-                                                   :x (* c 80)
-                                                   :y (* r 80)
-                                                   :height 75
-                                                   :width 75
+                                                   :x (* c 70)
+                                                   :y (* r 70)
+                                                   :height 70
+                                                   :width 70
                                                    :sprite "img/block.jpg"}))))
 
         (add-entity data (from-default-entity {:id :circle-1
@@ -219,7 +226,10 @@
                                  :x {:target (rand 600)
                                      :duration 60
                                      :easing :cubic-out
-                                     :when-done :new-ball}}}))
+                                     :when-done :new-ball}}})
+
+        (om/update! data :next)
+        )
 
       om/IRenderState
       (render-state [_ {:keys [game-chan]}]

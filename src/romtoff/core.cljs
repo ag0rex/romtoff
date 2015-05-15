@@ -54,6 +54,12 @@
                  [[1 1]
                   [1 0]]])
 
+(def ROWS 13)
+(def COLS 9)
+
+(defn in-bounds [[r c]]
+  (and (< r ROWS) (< c COLS)))
+
 (defn tetrimino-coords [t [x y]]
   (let [all-tiles (for [r (range (count t))
                         c (range (count (first t)))] [r c])]
@@ -117,9 +123,12 @@
                                ;; (tell id {:update {:sprite "img/block.jpg"}})
                                "")
                  :onMouseOver (fn [_]
-                                (let [tetrimino (get @app-state :next-tetrimino)]
-                                  (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
-                                    (tell affected-block-id {:update {:sprite "img/block-over.jpg"}})))
+                                (let [tetrimino (get @app-state :next-tetrimino)
+                                      tetrimino-coords (tetrimino-coords tetrimino (block-coords id))]
+                                  (when (every? #(in-bounds %) tetrimino-coords)
+                                    (println tetrimino-coords)
+                                    (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
+                                      (tell affected-block-id {:update {:sprite "img/block-over.jpg"}}))))
                                 "")
                  :onClick (fn [_]
                             (let [tetrimino (get @app-state :next-tetrimino)]
@@ -174,9 +183,6 @@
   (let [row (vec (map (constantly 1) (range r)))
         m (vec (map (constantly row) (range c)))]
     m))
-
-(def ROWS 13)
-(def COLS 9)
 
 (om/root
   (fn [data owner]

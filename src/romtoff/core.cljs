@@ -52,7 +52,22 @@
                  [[1 1 1]]
 
                  [[1 1]
-                  [1 0]]])
+                  [1 0]]
+
+                 [[1 1]
+                  [0 1]]
+
+                 [[1 1 0]
+                  [0 1 1]]
+
+                 [[1 1]
+                  [1 1]]
+
+                 [[1 1 1 1]]
+
+                 [[1 1 1]
+                  [0 1 0]]
+                 ])
 
 (def ROWS 13)
 (def COLS 9)
@@ -176,10 +191,23 @@
 ;;                             "")}
 ;;                 {:boo (fn [_] (put! game-chan {:boo {}}))}))
 
-(defn land [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
+(defn land [{:keys [id x y rotation ch animation sprite height width stage] :as data} owner]
   (build-sprite data owner
                 {:onClick (fn [_] (println id))}
-                {}))
+                {:next-state (fn [_]
+                               (println "land" id stage)
+                               (let [stage (om/get-props owner :stage)]
+                                 (case stage
+                                   0 (tell id {:update {:sprite "img/block-1.jpg" :stage 1}})
+                                   1 (tell id {:update {:sprite "img/block-2.jpg" :stage 2}})
+                                   2 (tell id {:update {:sprite "img/block.jpg" :stage 0}})))
+                               )}))
+
+(defn water [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
+  (build-sprite data owner
+                {:onClick (fn [_] (println id))}
+                {:next-state (fn [_] (println "water" id))}))
+
 
 (defn arrow [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
   (build-sprite data owner
@@ -190,8 +218,13 @@
                                 [t (get @app-state :next-tetrimino)
                                  c (block-coords id)
                                  tetrimino-blocks-coords (tetrimino-coords t c)]
+                              (doseq [block-coords tetrimino-blocks-coords]
+                                (tell (apply block-id block-coords) {:next-state {}}))
                               (println tetrimino-blocks-coords))
-                            (println id))}
+
+                            (put! game-chan {:gen-next-tetrimino {}})
+                            (println id)
+                            )}
                 {}))
 
 (defn falling-circle [{:keys [ch x y] :as data} owner]
@@ -227,7 +260,7 @@
 
 (defmethod builder :land [data owner] (land data owner))
 
-(defmethod builder :water [data owner] (land data owner))
+(defmethod builder :water [data owner] (water data owner))
 
 (defmethod builder :arrow [data owner] (arrow data owner))
 
@@ -243,15 +276,30 @@
    [0 0 0 0 0 0 0 0 0]
    [0 0 0 1 0 0 0 0 0]
    [0 0 1 1 1 1 1 0 0]
+   [0 0 1 1 0 1 1 0 0]
    [0 0 1 1 1 1 1 0 0]
+   [0 0 1 0 1 0 1 0 0]
    [0 0 1 1 1 1 1 0 0]
-   [0 0 1 1 1 1 1 0 0]
-   [0 0 1 1 1 1 1 0 0]
-   [0 0 1 1 1 1 1 0 0]
+   [0 0 1 1 1 0 1 0 0]
    [0 0 1 1 1 1 1 1 0]
    [0 0 0 0 0 0 0 0 0]
    [0 0 0 0 0 0 0 0 0]
    [0 0 0 0 0 0 0 0 1]])
+
+(def level-2
+  [[0 0 0 0 1 0 0 0 0]
+   [0 0 0 1 0 1 0 0 0]
+   [0 0 1 1 0 1 1 0 0]
+   [0 0 0 1 0 1 0 0 0]
+   [0 0 0 0 1 0 0 0 0]
+   [0 0 0 0 1 0 0 0 0]
+   [1 1 0 1 1 1 0 1 1]
+   [1 0 0 1 1 1 0 0 1]
+   [1 1 0 1 1 1 0 1 1]
+   [1 1 0 1 1 1 0 1 1]
+   [0 1 1 1 1 1 1 1 0]
+   [0 0 1 1 1 1 1 0 0]
+   [0 0 0 0 1 0 0 0 0]])
 
 (defn is-land [r c level]
   (= 1 (get-in level [r c])))
@@ -280,25 +328,26 @@
                                                :x 0
                                                :y 0
                                                :sprite "img/map_1.png"}))
+        (let [level level-2]
+          (doseq [r (range (count level))
+                  c (range (count (first level)))]
+            (if (is-land r c level)
+              (add-entity data (from-default-entity {:id (block-id r c)
+                                                     :type :land
+                                                     :x (* c 70)
+                                                     :y (* r 70)
+                                                     :height 70
+                                                     :width 70
+                                                     :sprite "img/block.jpg"
+                                                     :stage 0}))
 
-        (doseq [r (range (count level-1))
-                c (range (count (first level-1)))]
-          (if (is-land r c level-1)
-            (add-entity data (from-default-entity {:id (block-id r c)
-                                                   :type :land
-                                                   :x (* c 70)
-                                                   :y (* r 70)
-                                                   :height 70
-                                                   :width 70
-                                                   :sprite "img/block.jpg"}))
-
-            (add-entity data (from-default-entity {:id (block-id r c)
-                                                   :type :water
-                                                   :x (* c 70)
-                                                   :y (* r 70)
-                                                   :height 70
-                                                   :width 70
-                                                   :sprite "img/block-water.jpg"}))))
+              (add-entity data (from-default-entity {:id (block-id r c)
+                                                     :type :water
+                                                     :x (* c 70)
+                                                     :y (* r 70)
+                                                     :height 70
+                                                     :width 70
+                                                     :sprite "img/block-water.jpg"})))))
 
         ;; (doseq [r (range ROWS)
         ;;         c (range COLS)]
@@ -465,7 +514,7 @@
                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
                                 no-chan-map (merge data {:entities no-chan-entities})]
                             (dom/pre nil
-                                     (.stringify js/JSON (clj->js (:selection no-chan-map)) nil 4))))))))
+                                     (.stringify js/JSON (clj->js (:entities no-chan-map)) nil 4))))))))
   app-state
   {:target (. js/document (getElementById "app"))})
 

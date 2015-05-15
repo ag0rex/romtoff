@@ -74,11 +74,11 @@
                 acc))
             [] all-tiles)))
 
-(defn block-id [x y]
-  (keyword (str "block-" x "-" y)))
+(defn block-id [r c]
+  (keyword (str "block-" r "-" c)))
 
 (defn block-coords [block-id]
-  (map js/parseInt (subvec (clojure.string/split (name block-id) "-") 1)))
+  (vec (map js/parseInt (subvec (clojure.string/split (name block-id) "-") 1))))
 
 (defn block-by-coords [[x y]]
   (by-id (block-id x y)))
@@ -131,50 +131,55 @@
                        :transform (str "rotate(" (if rotation rotation 0) " " (+ (/ width 2) x) " " (+ (/ height 2) y) ")")}
                       event-handlers))))))
 
-(defn block [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
+;; (defn block [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
+;;   (build-sprite data owner
+;;                 {:onMouseOut (fn [_]
+;;                                (let [tetrimino (get @app-state :next-tetrimino)]
+;;                                  (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
+;;                                    (tell affected-block-id {:update {:sprite "img/block.jpg"}})))
+;;                                (println "Out" id)
+;;                                ;; (tell id {:update {:sprite "img/block.jpg"}})
+;;                                "")
+;;                  :onMouseOver (fn [_]
+;;                                 (let [tetrimino (get @app-state :next-tetrimino)
+;;                                       tetrimino-blocks-coords (tetrimino-coords tetrimino (block-coords id))]
+;;                                   (when (and (every? #(in-bounds %) tetrimino-blocks-coords)
+;;                                              (every? #(covered %) tetrimino-blocks-coords)
+;;                                              (some true? (for [uncovered-block-coords (get-uncovered-coords)
+;;                                                                block-coords tetrimino-blocks-coords]
+;;                                                            (is-near uncovered-block-coords block-coords))))
+
+;;                                     (println tetrimino-blocks-coords)
+
+;;                                     (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
+;;                                       (tell affected-block-id {:update {:sprite "img/block-over.jpg"}}))))
+;;                                 "")
+;;                  :onClick (fn [_]
+;;                             (let [tetrimino (get @app-state :next-tetrimino)
+;;                                   tetrimino-blocks-coords (tetrimino-coords tetrimino (block-coords id))]
+;;                               (when (and (every? #(in-bounds %) tetrimino-blocks-coords)
+;;                                          (every? #(covered %) tetrimino-blocks-coords)
+;;                                          (some true? (for [uncovered-block-coords (get-uncovered-coords)
+;;                                                            block-coords tetrimino-blocks-coords]
+;;                                                        (is-near uncovered-block-coords block-coords))))
+;;                                 (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
+;;                                   (tell affected-block-id {:tween {:x {:target 550
+;;                                                                        :duration 10
+;;                                                                        :easing :cubic-out}
+;;                                                                    :y {:target 1000
+;;                                                                        :duration 10
+;;                                                                        :easing :cubic-out}}}))
+;;                                 (doseq [coords (tetrimino-coords tetrimino (block-coords id))]
+;;                                   (println coords)
+;;                                   (put! game-chan {:zero-block {:coords coords}})))
+;;                               (put! game-chan {:gen-next-tetrimino {}}))
+;;                             "")}
+;;                 {:boo (fn [_] (put! game-chan {:boo {}}))}))
+
+(defn land [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
   (build-sprite data owner
-                {:onMouseOut (fn [_]
-                               (let [tetrimino (get @app-state :next-tetrimino)]
-                                 (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
-                                   (tell affected-block-id {:update {:sprite "img/block.jpg"}})))
-                               (println "Out" id)
-                               ;; (tell id {:update {:sprite "img/block.jpg"}})
-                               "")
-                 :onMouseOver (fn [_]
-                                (let [tetrimino (get @app-state :next-tetrimino)
-                                      tetrimino-blocks-coords (tetrimino-coords tetrimino (block-coords id))]
-                                  (when (and (every? #(in-bounds %) tetrimino-blocks-coords)
-                                             (every? #(covered %) tetrimino-blocks-coords)
-                                             (some true? (for [uncovered-block-coords (get-uncovered-coords)
-                                                               block-coords tetrimino-blocks-coords]
-                                                           (is-near uncovered-block-coords block-coords))))
-
-                                    (println tetrimino-blocks-coords)
-
-                                    (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
-                                      (tell affected-block-id {:update {:sprite "img/block-over.jpg"}}))))
-                                "")
-                 :onClick (fn [_]
-                            (let [tetrimino (get @app-state :next-tetrimino)
-                                  tetrimino-blocks-coords (tetrimino-coords tetrimino (block-coords id))]
-                              (when (and (every? #(in-bounds %) tetrimino-blocks-coords)
-                                         (every? #(covered %) tetrimino-blocks-coords)
-                                         (some true? (for [uncovered-block-coords (get-uncovered-coords)
-                                                           block-coords tetrimino-blocks-coords]
-                                                       (is-near uncovered-block-coords block-coords))))
-                                (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
-                                  (tell affected-block-id {:tween {:x {:target 550
-                                                                       :duration 10
-                                                                       :easing :cubic-out}
-                                                                   :y {:target 1000
-                                                                       :duration 10
-                                                                       :easing :cubic-out}}}))
-                                (doseq [coords (tetrimino-coords tetrimino (block-coords id))]
-                                  (println coords)
-                                  (put! game-chan {:zero-block {:coords coords}})))
-                              (put! game-chan {:gen-next-tetrimino {}}))
-                            "")}
-                {:boo (fn [_] (put! game-chan {:boo {}}))}))
+                {:onClick (fn [_] (println id))}
+                {}))
 
 (defn falling-circle [{:keys [ch x y] :as data} owner]
   (reify
@@ -205,7 +210,13 @@
 
 (defmethod builder :sprite [data owner] (build-sprite data owner {} {}))
 
-(defmethod builder :block [data owner] (block data owner))
+;; (defmethod builder :block [data owner] (block data owner))
+
+(defmethod builder :land [data owner] (land data owner))
+
+(defmethod builder :water [data owner] (land data owner))
+
+(defmethod builder :arrow [data owner] (build-sprite data owner {} {}))
 
 (defmethod builder :falling-circle [data owner] (falling-circle data owner))
 
@@ -213,6 +224,29 @@
   (let [row (vec (map (constantly 1) (range r)))
         m (vec (map (constantly row) (range c)))]
     m))
+
+(def level-1
+  [[0 0 0 0 0 0 0 0 0]
+   [0 0 0 0 0 0 0 0 0]
+   [0 0 0 1 0 0 0 0 0]
+   [0 0 1 1 1 1 1 0 0]
+   [0 0 1 1 1 1 1 0 0]
+   [0 0 1 1 1 1 1 0 0]
+   [0 0 1 1 1 1 1 0 0]
+   [0 0 1 1 1 1 1 0 0]
+   [0 0 1 1 1 1 1 0 0]
+   [0 0 1 1 1 1 1 1 0]
+   [0 0 0 0 0 0 0 0 0]
+   [0 0 0 0 0 0 0 0 0]
+   [0 0 0 0 0 0 0 0 1]])
+
+(defn is-land [r c level]
+  (= 1 (get-in level [r c])))
+
+(def X-OFFSET 8)
+(def Y-OFFSET 8)
+(def TILE-WIDTH 70)
+(def TILE-HEIGHT 70)
 
 (om/root
   (fn [data owner]
@@ -234,35 +268,79 @@
                                                :y 0
                                                :sprite "img/map_1.png"}))
 
-        (doseq [r (range ROWS)
-                c (range COLS)]
-          (let [id (block-id r c)]
-            (add-entity data (from-default-entity {:id id
-                                                   :type :block
+        (doseq [r (range (count level-1))
+                c (range (count (first level-1)))]
+          (if (is-land r c level-1)
+            (add-entity data (from-default-entity {:id (block-id r c)
+                                                   :type :land
                                                    :x (* c 70)
                                                    :y (* r 70)
                                                    :height 70
                                                    :width 70
-                                                   :sprite "img/block.jpg"}))))
+                                                   :sprite "img/block.jpg"}))
 
-        (om/update! data :clouds (ones COLS ROWS))
-        (om/transact! data :clouds #(assoc-in % [12 0] 0))
+            (add-entity data (from-default-entity {:id (block-id r c)
+                                                   :type :water
+                                                   :x (* c 70)
+                                                   :y (* r 70)
+                                                   :height 70
+                                                   :width 70
+                                                   :sprite "img/block-water.jpg"}))))
+
+        ;; (doseq [r (range ROWS)
+        ;;         c (range COLS)]
+        ;;   (let [id (block-id r c)]
+        ;;     (add-entity data (from-default-entity {:id id
+        ;;                                            :type :block
+        ;;                                            :x (* c 70)
+        ;;                                            :y (* r 70)
+        ;;                                            :height 70
+        ;;                                            :width 70
+        ;;                                            :sprite "img/block.jpg"}))))
+
+        ;; (om/update! data :clouds (ones COLS ROWS))
+        ;; (om/transact! data :clouds #(assoc-in % [12 0] 0))
 
         (add-entity data (from-default-entity {:id :circle-1
                                                :type :falling-circle}))
 
         (let [game-chan (om/get-state owner :game-chan)]
           ;; Game channel.
-          (go (loop []
-                (let [messages (<! game-chan)]
-                  (doseq [[type contents] messages]
-                    (println type)
-                    (case type
-                      :gen-next-tetrimino (om/update! data :next-tetrimino (rand-nth tetriminos))
-                      :zero-block (om/transact! data :clouds #(assoc-in % (:coords contents) 0))
-                      ;; :message action
-                      (.warn js/console (str "Game: Missing message handler for " type)))))
-                (recur)))))
+          (let [handler (fn [messages] (doseq [[type contents] messages]
+                                         (println type)
+                                         (case type
+                                           :selection
+                                           (do (println contents)
+                                               (let [[r c] (:current contents)]
+                                                 (put! game-chan {:clear-selection {}})
+                                                 (put! game-chan {:tetrimino-at {:coords [r c]}})))
+                                           :clear-selection
+                                           (do
+                                             (println (get data :entities))
+                                             (println "arrows" (filter #(= :arrow (:type %)) (get data :entities))))
+                                           :tetrimino-at
+                                           (do (println contents)
+                                               (let [t (get @app-state :next-tetrimino)
+                                                     c (:coords contents)]
+                                                 (println "message" t c)
+                                                 (let [tetrimino-blocks-coords (tetrimino-coords t c)]
+                                                   (doseq [[r c :as tbc] tetrimino-blocks-coords]
+                                                     (add-entity data (from-default-entity {:id (keyword (str "arrow" r c))
+                                                                                            :type :arrow
+                                                                                            :x (* c 70)
+                                                                                            :y (* r 70)
+                                                                                            :height 70
+                                                                                            :width 70
+                                                                                            :sprite "img/sageata.png"})))
+                                                   (println tetrimino-blocks-coords))))
+                                           :gen-next-tetrimino (om/update! data :next-tetrimino (rand-nth tetriminos))
+                                           :zero-block (om/transact! data :clouds #(assoc-in % (:coords contents) 0))
+                                           ;; :message action
+                                           (.warn js/console (str "Game: Missing message handler for " type)))))]
+            (go (loop []
+                  (let [messages (<! game-chan)]
+                    (handler messages))
+                  (recur))))))
 
       om/IDidMount
       (did-mount [_]
@@ -318,16 +396,27 @@
                                :style #js {:float "left"
                                            :border "1px solid lightgray"}
                                :onMouseMove (fn [e]
-                                              (om/update! data [:mouse :prev] (get-in data [:mouse :current]))
-                                              (om/update! data [:mouse :current] {:x (.-pageX e) :y (.-pageY e)})
+                                              (let [x (.-pageX e)
+                                                    y (.-pageY e)]
+                                                (om/update! data [:mouse :prev] (get-in data [:mouse :current]))
+                                                (om/update! data [:mouse :current] {:x x :y y})
 
-                                              (when (get-in data [:mouse :down])
-                                                (let [{:keys [current prev]} (get data :mouse)
-                                                      dx (- (current :x) (prev :x))
-                                                      dy (- (current :y) (prev :y))]
-                                                  (do
-                                                    ;; Drag.
-                                                    ))))
+                                                (let [new-selection [(quot (- y Y-OFFSET) TILE-HEIGHT)
+                                                                     (quot (- x X-OFFSET) TILE-WIDTH)]
+                                                      current-selection (get-in data [:selection :current])]
+                                                  (when (not= new-selection current-selection)
+                                                    (om/update! data [:selection :prev] current-selection)
+                                                    (om/update! data [:selection :current] new-selection)
+                                                    (put! game-chan {:selection {:prev current-selection
+                                                                                 :current new-selection}})))
+
+                                                (when (get-in data [:mouse :down])
+                                                  (let [{:keys [current prev]} (get data :mouse)
+                                                        dx (- (current :x) (prev :x))
+                                                        dy (- (current :y) (prev :y))]
+                                                    (do
+                                                      ;; Drag.
+                                                      )))))
 
                                :onMouseDown (fn [e]
                                               (om/update! data [:mouse :down] {:x (.-pageX e) :y (.-pageY e)}))
@@ -354,7 +443,7 @@
                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
                                 no-chan-map (merge data {:entities no-chan-entities})]
                             (dom/pre nil
-                                     (.stringify js/JSON (clj->js (:clouds no-chan-map)) nil 4))))))))
+                                     (.stringify js/JSON (clj->js (:entities no-chan-map)) nil 4))))))))
   app-state
   {:target (. js/document (getElementById "app"))})
 

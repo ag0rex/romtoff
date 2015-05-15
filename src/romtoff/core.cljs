@@ -213,15 +213,20 @@
                                (println "land" id stage)
                                (let [stage (om/get-props owner :stage)]
                                  (case stage
-                                   0 (tell id {:update {:sprite "img/block-1.jpg" :stage 1}})
-                                   1 (tell id {:update {:sprite "img/block-2.jpg" :stage 2}})
-                                   2 (tell id {:update {:sprite "img/block.jpg" :stage 0}})))
+                                   0 (do (tell id {:update {:sprite "img/block-1.jpg" :stage 1}})
+                                         (play-sound "crateLand"))
+                                   1 (do (tell id {:update {:sprite "img/block-2.jpg" :stage 2}})
+                                         (play-sound "crateDrop"))
+                                   2 (do (tell id {:update {:sprite "img/block.jpg" :stage 0}})
+                                         (play-sound "rockDestroy"))))
                                )}))
 
 (defn water [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
   (build-sprite data owner
                 {:onClick (fn [_] (println id))}
-                {:next-state (fn [_] (println "water" id))}))
+                {:next-state (fn [_]
+                               (println "water" id)
+                               (play-sound "rockDrop"))}))
 
 
 (defn arrow [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
@@ -440,7 +445,14 @@
                                      :easing :cubic-out
                                      :when-done :new-ball}}})
 
-        (om/update! data :next-tetrimino (rand-nth tetriminos)))
+        (om/update! data :next-tetrimino (rand-nth tetriminos))
+
+        (js/setTimeout (fn [_]
+                         (music-off)
+                         ;; (music-on)
+                         (sound-off)
+                         (sound-on))
+                       1000))
 
       om/IRenderState
       (render-state [_ {:keys [game-chan]}]
@@ -520,16 +532,17 @@
                                       (get data :entities))))
 
                  ;; Inspector.
-                 (dom/div #js {:style #js {:float "left"
-                                           :width 400
-                                           :height 800}}
-;;                          (prn-str data)
+                 ;; (dom/div #js {:style #js {:float "left"
+;;                                            :width 400
+;;                                            :height 800}}
+;; ;;                          (prn-str data)
 
-                          (let [data @data
-                                no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
-                                no-chan-map (merge data {:entities no-chan-entities})]
-                            (dom/pre nil
-                                     (.stringify js/JSON (clj->js (:entities no-chan-map)) nil 4))))))))
+;;                           (let [data @data
+;;                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
+;;                                 no-chan-map (merge data {:entities no-chan-entities})]
+;;                             (dom/pre nil
+;;                                      (.stringify js/JSON (clj->js (:entities no-chan-map)) nil 4))))
+                 ))))
   app-state
   {:target (. js/document (getElementById "app"))})
 

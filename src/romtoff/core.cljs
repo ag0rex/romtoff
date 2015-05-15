@@ -220,6 +220,11 @@
 ;;                             "")}
 ;;                 {:boo (fn [_] (put! game-chan {:boo {}}))}))
 
+(def stage->sprite
+  {0 "img/tiles_0001_full4.png"
+   1 "img/tiles_0004_full2.png"
+   2 "img/tiles_0003_full1.png"})
+
 (defn land [{:keys [id x y rotation ch animation sprite height width stage] :as data} owner]
   (build-sprite data owner
                 {:onClick (fn [_] (println id))}
@@ -227,11 +232,11 @@
                                ;; (println "land" id stage)
                                (let [stage (om/get-props owner :stage)]
                                  (case stage
-                                   0 (do (tell id {:update {:sprite "img/block-1.jpg" :stage 1}})
+                                   0 (do (tell id {:update {:sprite (stage->sprite 1) :stage 1}})
                                          (play-sound "crateLand"))
-                                   1 (do (tell id {:update {:sprite "img/block-2.jpg" :stage 2}})
+                                   1 (do (tell id {:update {:sprite (stage->sprite 2) :stage 2}})
                                          (play-sound "crateDrop"))
-                                   2 (do (tell id {:update {:sprite "img/block.jpg" :stage 0}})
+                                   2 (do (tell id {:update {:sprite (stage->sprite 0) :stage 0}})
                                          (play-sound "rockDestroy"))))
                                )}))
 
@@ -364,34 +369,26 @@
       (will-mount [_]
         (js/setInterval #(om/transact! data :tick inc) 34)
 
-
-        (add-entity data (from-default-entity {:id :map
-                                               :type :sprite
-                                               :height 910
-                                               :width 630
-                                               :x 0
-                                               :y 0
-                                               :sprite "img/map_1.png"}))
         (let [level level-2]
           (doseq [r (range (count level))
                   c (range (count (first level)))]
             (if (is-land r c level)
               (add-entity data (from-default-entity {:id (block-id r c)
                                                      :type :land
-                                                     :x (* c 70)
+                                                     :x (* c 69)
                                                      :y (* r 70)
                                                      :height 70
-                                                     :width 70
-                                                     :sprite "img/block.jpg"
+                                                     :width 69
+                                                     :sprite (stage->sprite 0)
                                                      :stage 0}))
 
               (add-entity data (from-default-entity {:id (block-id r c)
                                                      :type :water
-                                                     :x (* c 70)
+                                                     :x (* c 69)
                                                      :y (* r 70)
                                                      :height 70
-                                                     :width 70
-                                                     :sprite "img/block-water.jpg"})))))
+                                                     :width 69
+                                                     :sprite "img/tiles_0000_full41-copy-2.png"})))))
 
         (add-entity data (from-default-entity {:id :rotate-button
                                                :type :rotate-button

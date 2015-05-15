@@ -72,11 +72,21 @@
                        :transform (str "rotate(" (if rotation rotation 0) " " (+ (/ width 2) x) " " (+ (/ height 2) y) ")")}
                       event-handlers))))))
 
+(def tetrimino [[1 0]
+                [1 0]
+                [1 1]])
+
 (defn block [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
   (build-sprite data owner
-                {:onMouseOver (fn [_] (println id))
+                {:onMouseOut (fn [_]
+                               (println "Out" id)
+                               (tell id {:update {:sprite "img/block.jpg"}})
+                               "")
+                 :onMouseOver (fn [_]
+                                (println "Over" id)
+                                (tell id {:update {:sprite "img/block-over.jpg"}})
+                                "")
                  :onClick (fn [_]
-                            (println id)
                             (tell id {:tween {:x {:target 500
                                                   :duration 10
                                                   :easing :bounce-out}
@@ -129,7 +139,7 @@
 
       om/IWillMount
       (will-mount [_]
-        (js/setInterval #(om/transact! data :tick inc) 20)
+        (js/setInterval #(om/transact! data :tick inc) 10)
 
         ;; (add-entity data [:dude (from-default-entity {:id :dude
         ;;                                               :type :sprite
@@ -142,8 +152,8 @@
         ;;                                                                    "img/dude-nosed.png"]
         ;;                                                           :duration 20}})])
 
-        (doseq [r (range 9)
-                c (range 12)]
+        (doseq [r (range 8)
+                c (range 8)]
           (let [id (keyword (str "block-" r "-" c))]
             (add-entity data (from-default-entity {:id id
                                                    :type :block

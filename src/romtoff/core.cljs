@@ -44,6 +44,36 @@
   (let [ch (:ch (by-id entity-id))]
     (put! ch message)))
 
+(def tetrimino [[1 0]
+                [0 1]
+                [1 0]
+                ])
+
+(defn tetrimino-coords [t [x y]]
+  (let [all-tiles (for [r (range (count t))
+                        c (range (count (first t)))] [r c])]
+    ;; (println all-tiles)
+    (reduce (fn [acc [r c]]
+              ;; (println r c (get-in tetrimino [r c]))
+              (if (= 1 (get-in tetrimino [r c]))
+                (conj acc [(+ x r) (+ y c)])
+                acc))
+            [] all-tiles)))
+
+(defn block-id [x y]
+  (keyword (str "block-" x "-" y)))
+
+(defn block-coords [block-id]
+  (map js/parseInt (subvec (clojure.string/split (name block-id) "-") 1)))
+
+(defn block-by-coords [[x y]]
+  (by-id (block-id x y)))
+
+(defn block-ids-by-tetrimino-and-block-id [tetrimino id]
+  (map (comp :id block-by-coords) (tetrimino-coords tetrimino (block-coords id))))
+
+(println (tetrimino-coords tetrimino [1 1]))
+
 (defn build-sprite [{:keys [id x y rotation ch animation sprite height width] :as data} owner event-handlers message-handlers]
   (reify
     om/IWillMount
@@ -69,30 +99,33 @@
                                                               "\" x=\"" x
                                                               "\" y=\"" y
                                                               "\" xlink:href=\"" img "\" />")}
+                       :width width
+                       :height height
                        :transform (str "rotate(" (if rotation rotation 0) " " (+ (/ width 2) x) " " (+ (/ height 2) y) ")")}
                       event-handlers))))))
-
-(def tetrimino [[1 0]
-                [1 0]
-                [1 1]])
 
 (defn block [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
   (build-sprite data owner
                 {:onMouseOut (fn [_]
+                               (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
+                                 (tell affected-block-id {:update {:sprite "img/block.jpg"}}))
                                (println "Out" id)
-                               (tell id {:update {:sprite "img/block.jpg"}})
+                               ;; (tell id {:update {:sprite "img/block.jpg"}})
                                "")
                  :onMouseOver (fn [_]
-                                (println "Over" id)
-                                (tell id {:update {:sprite "img/block-over.jpg"}})
+                                (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
+                                  (tell affected-block-id {:update {:sprite "img/block-over.jpg"}}))
                                 "")
                  :onClick (fn [_]
-                            (tell id {:tween {:x {:target 500
-                                                  :duration 10
-                                                  :easing :bounce-out}
-                                              :y {:target 500
-                                                  :duration 10
-                                                  :easing :bounce-out}}})
+                            (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
+                              (tell affected-block-id {:tween {:x {:target 550
+                                                                   :duration 10
+                                                                   :easing :cubic-out}
+                                                               :y {:target 1000
+                                                                   :duration 10
+                                                                   :easing :cubic-out}}})
+                              )
+
                             (put! game-chan :booauaoeu)
                             "")}
                 {:boo (fn [_] (put! game-chan :boo))}))
@@ -152,15 +185,15 @@
         ;;                                                                    "img/dude-nosed.png"]
         ;;                                                           :duration 20}})])
 
-        (doseq [r (range 8)
+        (doseq [r (range 11)
                 c (range 8)]
-          (let [id (keyword (str "block-" r "-" c))]
+          (let [id (block-id r c)]
             (add-entity data (from-default-entity {:id id
                                                    :type :block
-                                                   :x (* r 62)
-                                                   :y (* c 62)
-                                                   :height 60
-                                                   :width 60
+                                                   :x (* c 80)
+                                                   :y (* r 80)
+                                                   :height 75
+                                                   :width 75
                                                    :sprite "img/block.jpg"}))))
 
         (add-entity data (from-default-entity {:id :circle-1
@@ -179,7 +212,7 @@
       (did-mount [_]
         (tell :block-0-0 {:boo true})
         (tell :circle-1 {:update {:x (rand 600)}
-                         :tween {:y {:target 800
+                         :tween {:y {:target 1000
                                      :duration 30
                                      :easing :bounce-out
                                      }
@@ -222,8 +255,8 @@
                     (om/update! animation :current (get frames next-index))))))))
 
         (dom/div nil
-                 (dom/svg #js {:width 600
-                               :height 800
+                 (dom/svg #js {:width 640
+                               :height 1136
                                :style #js {:float "left"
                                            :border "1px solid lightgray"}
                                :onMouseMove (fn [e]
@@ -245,7 +278,7 @@
                                             (om/update! data [:mouse :down] false))}
 
                           (dom/rect #js {:x 0 :y 0
-                                         :width 600 :height 800
+                                         :width 640 :height 1136
                                          :style #js {:fill "rgb(250, 250, 200)"}})
 
                           (dom/g nil

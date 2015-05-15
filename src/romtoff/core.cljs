@@ -139,6 +139,12 @@
       (and (= r1 r2) (= c1 (dec c2)))
       (and (= r1 r2) (= c1 (inc c2)))))
 
+(defn rotate-left [t]
+  (reduce (fn [acc index] (conj acc (vec (map #(get % index) t)))) [] (reverse (range (count (first t))))))
+
+(println (rotate-left [[0 1]
+                       [1 1]]))
+
 (defn build-sprite [{:keys [id x y rotation ch animation sprite height width] :as data} owner event-handlers message-handlers]
   (reify
     om/IWillMount
@@ -256,6 +262,13 @@
                             )}
                 {}))
 
+(defn rotate-button [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
+  (build-sprite data owner
+                {:onClick (fn [_]
+                            (put! game-chan {:rotate-tetrimino {}})
+                            "")}
+                {}))
+
 (defn falling-circle [{:keys [ch x y] :as data} owner]
   (reify
     om/IWillMount
@@ -292,6 +305,8 @@
 (defmethod builder :water [data owner] (water data owner))
 
 (defmethod builder :arrow [data owner] (arrow data owner))
+
+(defmethod builder :rotate-button [data owner] (rotate-button data owner))
 
 (defmethod builder :falling-circle [data owner] (falling-circle data owner))
 
@@ -378,6 +393,14 @@
                                                      :width 70
                                                      :sprite "img/block-water.jpg"})))))
 
+        (add-entity data (from-default-entity {:id :rotate-button
+                                               :type :rotate-button
+                                               :x 10
+                                               :y 1000
+                                               :width 100
+                                               :height 100
+                                               :sprite "img/block-over.jpg"}))
+
         ;; (doseq [r (range ROWS)
         ;;         c (range COLS)]
         ;;   (let [id (block-id r c)]
@@ -435,6 +458,8 @@
                                                    )))
 
                                            :gen-next-tetrimino (om/update! data :next-tetrimino (rand-nth tetriminos))
+
+                                           :rotate-tetrimino (om/transact! data :next-tetrimino rotate-left)
                                            ;; :message action
                                            (.warn js/console (str "Game: Missing message handler for " type)))))]
             (go (loop []

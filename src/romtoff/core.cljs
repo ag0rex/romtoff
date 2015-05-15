@@ -82,25 +82,33 @@
 
                  [[1 1 1]
                   [0 1 0]]
+
+                 [[0 1 1]
+                  [1 1 0]]
+
+                 [[0 1]
+                  [1 1]]
                  ])
 
 (def ROWS 13)
 (def COLS 9)
 
 (defn in-bounds [[r c]]
-  (and (< r ROWS) (< c COLS)))
+  (and (< -1 r) (< -1 c) (< r ROWS) (< c COLS)))
 
 (defn covered [[r c]]
   (= 1 (get-in @app-state [:clouds r c])))
 
 (defn tetrimino-coords [t [x y]]
   (let [all-tiles (for [r (range (count t))
-                        c (range (count (first t)))] [r c])]
+                        c (range (count (first t)))] [r c])
+        x-offset (- (.indexOf (clj->js (first t)) 1))]
+    ;; (println (.indexOf (clj->js (first t)) 1))
     ;; (println all-tiles)
     (reduce (fn [acc [r c]]
               ;; (println r c (get-in tetrimino [r c]))
               (if (= 1 (get-in t [r c]))
-                (conj acc [(+ x r) (+ y c)])
+                (conj acc [(+ x r) (+ y c x-offset)])
                 acc))
             [] all-tiles)))
 
@@ -210,7 +218,7 @@
   (build-sprite data owner
                 {:onClick (fn [_] (println id))}
                 {:next-state (fn [_]
-                               (println "land" id stage)
+                               ;; (println "land" id stage)
                                (let [stage (om/get-props owner :stage)]
                                  (case stage
                                    0 (do (tell id {:update {:sprite "img/block-1.jpg" :stage 1}})
@@ -225,7 +233,7 @@
   (build-sprite data owner
                 {:onClick (fn [_] (println id))}
                 {:next-state (fn [_]
-                               (println "water" id)
+                               ;; (println "water" id)
                                (play-sound "rockDrop"))}))
 
 
@@ -240,10 +248,11 @@
                                  tetrimino-blocks-coords (tetrimino-coords t c)]
                               (doseq [block-coords tetrimino-blocks-coords]
                                 (tell (apply block-id block-coords) {:next-state {}}))
-                              (println tetrimino-blocks-coords))
+                              ;; (println tetrimino-blocks-coords)
+                              )
 
                             (put! game-chan {:gen-next-tetrimino {}})
-                            (println id)
+                            ;; (println id)
                             )}
                 {}))
 
@@ -389,7 +398,7 @@
         (let [game-chan (om/get-state owner :game-chan)]
           ;; Game channel.
           (let [handler (fn [messages] (doseq [[type contents] messages]
-                                         (println type)
+                                         ;; (println type)
                                          (case type
                                            :selection
                                            (do
@@ -409,7 +418,7 @@
                                            (do
                                                (let [t (get @app-state :next-tetrimino)
                                                      c (:coords contents)]
-                                                 (println "message" t c)
+                                                 ;; (println "message" t c)
                                                  (let [tetrimino-blocks-coords (tetrimino-coords t c)]
                                                    ;; Selection must be inside map.
                                                    (when (every? #(in-bounds %) tetrimino-blocks-coords)
@@ -422,7 +431,8 @@
                                                                                               :height 70
                                                                                               :width 70
                                                                                               :sprite "img/sageata.png"}))))
-                                                   (println tetrimino-blocks-coords))))
+                                                   ;; (println tetrimino-blocks-coords)
+                                                   )))
 
                                            :gen-next-tetrimino (om/update! data :next-tetrimino (rand-nth tetriminos))
                                            ;; :message action
@@ -532,16 +542,16 @@
                                       (get data :entities))))
 
                  ;; Inspector.
-                 ;; (dom/div #js {:style #js {:float "left"
-;;                                            :width 400
-;;                                            :height 800}}
-;; ;;                          (prn-str data)
+                 (dom/div #js {:style #js {:float "left"
+                                           :width 400
+                                           :height 800}}
+;;                          (prn-str data)
 
-;;                           (let [data @data
-;;                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
-;;                                 no-chan-map (merge data {:entities no-chan-entities})]
-;;                             (dom/pre nil
-;;                                      (.stringify js/JSON (clj->js (:entities no-chan-map)) nil 4))))
+                          (let [data @data
+                                no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
+                                no-chan-map (merge data {:entities no-chan-entities})]
+                            (dom/pre nil
+                                     (.stringify js/JSON (clj->js (:entities no-chan-map)) nil 4))))
                  ))))
   app-state
   {:target (. js/document (getElementById "app"))})

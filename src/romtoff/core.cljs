@@ -222,7 +222,7 @@
 
 (def stage->sprite
   {0 "img/1.png"
-   1 "img/2.png"
+   1 "img/crate1.png"
    2 "img/3.png"})
 
 (def int->sprite
@@ -247,8 +247,11 @@
                                (let [stage (om/get-props owner :stage)]
                                  (case stage
                                    0 (do (tell id {:update {:sprite (stage->sprite 1) :stage 1}})
+                                         (put! game-chan {:increase-score {:points 100}})
                                          (play-sound "crateLand"))
-                                   1 (do (tell id {:update {:sprite (stage->sprite 0) :stage 0}})
+                                   1 (do (tell id {:update {:sprite (rand-nth ["img/10.png"
+                                                                               "img/11.png"
+                                                                               "img/12.png"]) :stage 0}})
                                          (play-sound "crateDrop"))
                                    2 (do (tell id {:update {:sprite (stage->sprite 0) :stage 0}})
                                          (play-sound "rockDestroy"))))
@@ -276,7 +279,7 @@
                               ;; (println tetrimino-blocks-coords)
                               )
 
-                            (put! game-chan {:gen-next-tetrimino {}})
+                            (put! game-chan {:next-move {}})
                             ;; (println id)
                             )}
                 {}))
@@ -428,26 +431,6 @@
       (will-mount [_]
         (js/setInterval #(om/transact! data :tick inc) 34)
 
-        (let [level level-4]
-          (doseq [r (range (count level))
-                  c (range (count (first level)))]
-            (if (is-land r c level)
-              (add-entity data (from-default-entity {:id (block-id r c)
-                                                     :type :land
-                                                     :x (* c 69)
-                                                     :y (* r 70)
-                                                     :height 70
-                                                     :width 69
-                                                     :sprite (stage->sprite 0)
-                                                     :stage 0}))
-
-              (add-entity data (from-default-entity {:id (block-id r c)
-                                                     :type :water
-                                                     :x (* c 69)
-                                                     :y (* r 70)
-                                                     :height 70
-                                                     :width 69
-                                                     :sprite (int->sprite (get-in level [r c]))})))))
 
         (add-entity data (from-default-entity {:id :rotate-button
                                                :type :rotate-button
@@ -479,6 +462,33 @@
           (let [handler (fn [messages] (doseq [[type contents] messages]
                                          ;; (println type)
                                          (case type
+                                           :load-level
+                                           (do
+                                             (om/update! data :score 0)
+                                             (om/update! data :moves 1)
+                                             (let [level (:level contents)]
+                                               (doseq [r (range (count level))
+                                                       c (range (count (first level)))]
+                                                 (if (is-land r c level)
+                                                   (add-entity data (from-default-entity {:id (block-id r c)
+                                                                                          :type :land
+                                                                                          :x (* c 70)
+                                                                                          :y (* r 70)
+                                                                                          :height 70
+                                                                                          :width 70
+                                                                                          :sprite (rand-nth ["img/10.png"
+                                                                                                             "img/11.png"
+                                                                                                             "img/12.png"])
+                                                                                          :stage 0}))
+
+                                                   (add-entity data (from-default-entity {:id (block-id r c)
+                                                                                          :type :water
+                                                                                          :x (* c 70)
+                                                                                          :y (* r 70)
+                                                                                          :height 70
+                                                                                          :width 70
+                                                                                          :sprite (int->sprite (get-in level [r c]))})))))
+                                             )
                                            :selection
                                            (do
                                                (let [[r c] (:current contents)]
@@ -505,17 +515,34 @@
                                                      (doseq [[r c :as tbc] tetrimino-blocks-coords]
                                                        (add-entity data (from-default-entity {:id (keyword (str "arrow-" r "-" c))
                                                                                               :type :arrow
-                                                                                              :x (* c 69)
+                                                                                              :x (* c 70)
                                                                                               :y (* r 70)
                                                                                               :height 70
-                                                                                              :width 69
+                                                                                              :width 70
                                                                                               :sprite "img/sageata.png"}))))
                                                    ;; (println tetrimino-blocks-coords)
                                                    )))
 
-                                           :gen-next-tetrimino (om/update! data :next-tetrimino (rand-nth tetriminos))
+                                           :next-move
+                                           (do
+                                             (let [moves (get @app-state :moves)
+                                                   new-moves (dec moves)]
+                                               (om/update! data :moves new-moves)
+                                               (if (zero? new-moves)
+                                                 (put! game-chan {:game-over {}})
+                                                 (om/update! data :next-tetrimino (rand-nth tetriminos)))))
+
+                                           :game-over
+                                           (do
+                                             (om/update! data :game-over true))
 
                                            :rotate-tetrimino (om/transact! data :next-tetrimino rotate-left)
+
+                                           :increase-score
+                                           (do
+                                             (let [score (get @app-state :score)]
+                                               (om/update! data :score (+ (:points contents) score))))
+
                                            ;; :message action
                                            (.warn js/console (str "Game: Missing message handler for " type)))))]
             (go (loop []
@@ -525,7 +552,7 @@
 
       om/IDidMount
       (did-mount [_]
-        (tell :block-0-0 {:boo true})
+
         (tell :circle-1 {:update {:x (rand 600)}
                          :tween {:y {:target 1000
                                      :duration 30
@@ -537,6 +564,8 @@
                                      :when-done :new-ball}}})
 
         (om/update! data :next-tetrimino (rand-nth tetriminos))
+
+        (put! game-chan {:load-level {:level level-3}})
 
         (js/setTimeout (fn [_]
                          (music-off)
@@ -577,6 +606,12 @@
                   (let [current-index (.indexOf (to-array frames) current)
                         next-index (if (= (dec (count frames)) current-index) 0 (inc current-index))]
                     (om/update! animation :current (get frames next-index))))))))
+
+        ;; If map filled?
+        (let [entities (get @app-state :entities)
+              lands (filter #(= :land (:type %)) entities)
+              all-filled (every? #(< 0 (:stage %)) lands)]
+          (put! game-chan {:game-over {}}))
 
         (dom/div nil
                  (dom/svg #js {:width 640
@@ -632,7 +667,7 @@
                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
                                 no-chan-map (merge data {:entities no-chan-entities})]
                             (dom/pre nil
-                                     (.stringify js/JSON (clj->js (:entities no-chan-map)) nil 4))))
+                                     (.stringify js/JSON (clj->js (:moves no-chan-map)) nil 4))))
                  ))))
   app-state
   {:target (. js/document (getElementById "app"))})

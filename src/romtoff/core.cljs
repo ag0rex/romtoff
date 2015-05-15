@@ -318,7 +318,7 @@
 
       om/IWillMount
       (will-mount [_]
-        (js/setInterval #(om/transact! data :tick inc) 10)
+        (js/setInterval #(om/transact! data :tick inc) 34)
 
 
         (add-entity data (from-default-entity {:id :map

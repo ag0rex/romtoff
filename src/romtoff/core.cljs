@@ -129,9 +129,9 @@
                                                                  :y {:target 1000
                                                                      :duration 10
                                                                      :easing :cubic-out}}})))
-                            (put! game-chan [:gen-next-tetrimino {}])
+                            (put! game-chan {:gen-next-tetrimino {}})
                             "")}
-                {:boo (fn [_] (put! game-chan :boo))}))
+                {:boo (fn [_] (put! game-chan {:boo {}}))}))
 
 (defn falling-circle [{:keys [ch x y] :as data} owner]
   (reify
@@ -205,11 +205,13 @@
         (let [game-chan (om/get-state owner :game-chan)]
           ;; Game channel.
           (go (loop []
-                (let [[type contents] (<! game-chan)]
-                  (case type
-                    :gen-next-tetrimino (om/update! data :next-tetrimino (rand-nth tetriminos))
-                    ;; :message action
-                    (.warn js/console (str "Game: Missing message handler for " type))))
+                (let [messages (<! game-chan)]
+                  (doseq [[type contents] messages]
+                    (println type)
+                    (case type
+                      :gen-next-tetrimino (om/update! data :next-tetrimino (rand-nth tetriminos))
+                      ;; :message action
+                      (.warn js/console (str "Game: Missing message handler for " type)))))
                 (recur)))))
 
       om/IDidMount
@@ -243,7 +245,7 @@
                      (om/transact! tween :progress inc)
                      (when (= duration progress)
                        (om/transact! entity :tweens #(dissoc % key))
-                       (when when-done (put! game-chan [when-done {}])))))))
+                       (when when-done (put! game-chan {when-done {}})))))))
 
         ;; Animation system.
         (doseq [entity (get data :entities)]
@@ -302,7 +304,7 @@
                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
                                 no-chan-map (merge data {:entities no-chan-entities})]
                             (dom/pre nil
-                                     (.stringify js/JSON (clj->js no-chan-map) nil 4))))))))
+                                     (.stringify js/JSON (clj->js (:next-tetrimino no-chan-map)) nil 4))))))))
   app-state
   {:target (. js/document (getElementById "app"))})
 

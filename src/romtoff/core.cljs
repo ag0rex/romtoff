@@ -310,16 +310,19 @@
                                          (println type)
                                          (case type
                                            :selection
-                                           (do (println contents)
+                                           (do
                                                (let [[r c] (:current contents)]
                                                  (put! game-chan {:clear-selection {}})
                                                  (put! game-chan {:tetrimino-at {:coords [r c]}})))
                                            :clear-selection
                                            (do
-                                             (println (get data :entities))
-                                             (println "arrows" (filter #(= :arrow (:type %)) (get data :entities))))
+                                             (let [data (om/get-props owner)
+                                                   entities (:entities data)
+                                                   arrow-ids (set (map :id (filter #(= :arrow (:type %)) entities)))
+                                                   no-arrows (vec (remove #(contains? arrow-ids (:id %)) entities))]
+                                               (om/update! data :entities no-arrows)))
                                            :tetrimino-at
-                                           (do (println contents)
+                                           (do
                                                (let [t (get @app-state :next-tetrimino)
                                                      c (:coords contents)]
                                                  (println "message" t c)

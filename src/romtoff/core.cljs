@@ -86,6 +86,21 @@
 (defn block-ids-by-tetrimino-and-block-id [tetrimino id]
   (map (comp :id block-by-coords) (tetrimino-coords tetrimino (block-coords id))))
 
+(defn get-uncovered-coords []
+  (reduce (fn [acc coords]
+            (if-not (covered coords)
+              (conj acc coords)
+              acc))
+          []
+          (for [r (range ROWS)
+                c (range COLS)] [r c])))
+
+(defn is-near [[r1 c1] [r2 c2]]
+  (or (and (= c1 c2) (= r1 (dec r2)))
+      (and (= c1 c2) (= r1 (inc r2)))
+      (and (= r1 r2) (= c1 (dec c2)))
+      (and (= r1 r2) (= c1 (inc c2)))))
+
 (defn build-sprite [{:keys [id x y rotation ch animation sprite height width] :as data} owner event-handlers message-handlers]
   (reify
     om/IWillMount
@@ -129,7 +144,10 @@
                                 (let [tetrimino (get @app-state :next-tetrimino)
                                       tetrimino-blocks-coords (tetrimino-coords tetrimino (block-coords id))]
                                   (when (and (every? #(in-bounds %) tetrimino-blocks-coords)
-                                             (every? #(covered %) tetrimino-blocks-coords))
+                                             (every? #(covered %) tetrimino-blocks-coords)
+                                             (some true? (for [uncovered-block-coords (get-uncovered-coords)
+                                                               block-coords tetrimino-blocks-coords]
+                                                           (is-near uncovered-block-coords block-coords))))
 
                                     (println tetrimino-blocks-coords)
 
@@ -140,7 +158,10 @@
                             (let [tetrimino (get @app-state :next-tetrimino)
                                   tetrimino-blocks-coords (tetrimino-coords tetrimino (block-coords id))]
                               (when (and (every? #(in-bounds %) tetrimino-blocks-coords)
-                                         (every? #(covered %) tetrimino-blocks-coords))
+                                         (every? #(covered %) tetrimino-blocks-coords)
+                                         (some true? (for [uncovered-block-coords (get-uncovered-coords)
+                                                           block-coords tetrimino-blocks-coords]
+                                                       (is-near uncovered-block-coords block-coords))))
                                 (doseq [affected-block-id (block-ids-by-tetrimino-and-block-id tetrimino id)]
                                   (tell affected-block-id {:tween {:x {:target 550
                                                                        :duration 10
@@ -225,6 +246,7 @@
                                                    :sprite "img/block.jpg"}))))
 
         (om/update! data :clouds (ones COLS ROWS))
+        (om/transact! data :clouds #(assoc-in % [12 0] 0))
 
         (add-entity data (from-default-entity {:id :circle-1
                                                :type :falling-circle}))

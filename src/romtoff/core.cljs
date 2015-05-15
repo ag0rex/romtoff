@@ -10,7 +10,7 @@
 
 ;; define your app data so that it doesn't get over-written on reload
 
-(defonce app-state (atom {:tick 0
+(def app-state (atom {:tick 0
                           :entities []}))
 
 (defonce game-chan (chan))
@@ -72,10 +72,17 @@
                        :transform (str "rotate(" (if rotation rotation 0) " " (+ (/ width 2) x) " " (+ (/ height 2) y) ")")}
                       event-handlers))))))
 
-(defn block [{:keys [x y rotation ch animation sprite height width] :as data} owner]
+(defn block [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
   (build-sprite data owner
-                {:onClick (fn [_]
-                            (println x y)
+                {:onMouseOver (fn [_] (println id))
+                 :onClick (fn [_]
+                            (println id)
+                            (tell id {:tween {:x {:target 500
+                                                  :duration 10
+                                                  :easing :bounce-out}
+                                              :y {:target 500
+                                                  :duration 10
+                                                  :easing :bounce-out}}})
                             (put! game-chan :booauaoeu)
                             "")}
                 {:boo (fn [_] (put! game-chan :boo))}))
@@ -135,8 +142,8 @@
         ;;                                                                    "img/dude-nosed.png"]
         ;;                                                           :duration 20}})])
 
-        (doseq [r (range 6)
-                c (range 6)]
+        (doseq [r (range 9)
+                c (range 12)]
           (let [id (keyword (str "block-" r "-" c))]
             (add-entity data (from-default-entity {:id id
                                                    :type :block

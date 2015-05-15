@@ -41,8 +41,9 @@
   (first (filter #(= entity-id (:id %)) (:entities @app-state))))
 
 (defn tell [entity-id message]
-  (let [ch (:ch (by-id entity-id))]
-    (put! ch message)))
+  (when-let [entity (by-id entity-id)]
+    (let [ch (:ch entity)]
+      (put! ch message))))
 
 (def tetriminos [[[1]]
 
@@ -130,6 +131,7 @@
                                                                      :duration 10
                                                                      :easing :cubic-out}}}))
                               (doseq [coords (tetrimino-coords tetrimino (block-coords id))]
+                                (println coords)
                                 (put! game-chan {:zero-block {:coords coords}})))
                             (put! game-chan {:gen-next-tetrimino {}})
                             "")}
@@ -198,7 +200,7 @@
                                                    :width 70
                                                    :sprite "img/block.jpg"}))))
 
-        (om/update! data :clouds (ones COLS ROWS))
+        (om/update! data :clouds (ones (dec COLS) (dec ROWS)))
 
         (add-entity data (from-default-entity {:id :circle-1
                                                :type :falling-circle}))
@@ -306,7 +308,7 @@
                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
                                 no-chan-map (merge data {:entities no-chan-entities})]
                             (dom/pre nil
-                                     (.stringify js/JSON (clj->js no-chan-map) nil 4))))))))
+                                     (.stringify js/JSON (clj->js (:clouds no-chan-map)) nil 4))))))))
   app-state
   {:target (. js/document (getElementById "app"))})
 

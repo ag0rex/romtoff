@@ -314,6 +314,7 @@
                                                (let [[r c] (:current contents)]
                                                  (put! game-chan {:clear-selection {}})
                                                  (put! game-chan {:tetrimino-at {:coords [r c]}})))
+
                                            :clear-selection
                                            (do
                                              (let [data (om/get-props owner)
@@ -321,23 +322,27 @@
                                                    arrow-ids (set (map :id (filter #(= :arrow (:type %)) entities)))
                                                    no-arrows (vec (remove #(contains? arrow-ids (:id %)) entities))]
                                                (om/update! data :entities no-arrows)))
+
                                            :tetrimino-at
                                            (do
                                                (let [t (get @app-state :next-tetrimino)
                                                      c (:coords contents)]
                                                  (println "message" t c)
                                                  (let [tetrimino-blocks-coords (tetrimino-coords t c)]
-                                                   (doseq [[r c :as tbc] tetrimino-blocks-coords]
-                                                     (add-entity data (from-default-entity {:id (keyword (str "arrow" r c))
-                                                                                            :type :arrow
-                                                                                            :x (* c 70)
-                                                                                            :y (* r 70)
-                                                                                            :height 70
-                                                                                            :width 70
-                                                                                            :sprite "img/sageata.png"})))
+                                                   ;; Selection must be inside map.
+                                                   (when (every? #(in-bounds %) tetrimino-blocks-coords)
+
+                                                     (doseq [[r c :as tbc] tetrimino-blocks-coords]
+                                                       (add-entity data (from-default-entity {:id (keyword (str "arrow" r c))
+                                                                                              :type :arrow
+                                                                                              :x (* c 70)
+                                                                                              :y (* r 70)
+                                                                                              :height 70
+                                                                                              :width 70
+                                                                                              :sprite "img/sageata.png"}))))
                                                    (println tetrimino-blocks-coords))))
+
                                            :gen-next-tetrimino (om/update! data :next-tetrimino (rand-nth tetriminos))
-                                           :zero-block (om/transact! data :clouds #(assoc-in % (:coords contents) 0))
                                            ;; :message action
                                            (.warn js/console (str "Game: Missing message handler for " type)))))]
             (go (loop []
@@ -404,6 +409,7 @@
                                                 (om/update! data [:mouse :prev] (get-in data [:mouse :current]))
                                                 (om/update! data [:mouse :current] {:x x :y y})
 
+                                                ;; Selection.
                                                 (let [new-selection [(quot (- y Y-OFFSET) TILE-HEIGHT)
                                                                      (quot (- x X-OFFSET) TILE-WIDTH)]
                                                       current-selection (get-in data [:selection :current])]
@@ -446,7 +452,7 @@
                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
                                 no-chan-map (merge data {:entities no-chan-entities})]
                             (dom/pre nil
-                                     (.stringify js/JSON (clj->js (:entities no-chan-map)) nil 4))))))))
+                                     (.stringify js/JSON (clj->js (:selection no-chan-map)) nil 4))))))))
   app-state
   {:target (. js/document (getElementById "app"))})
 

@@ -37,6 +37,21 @@
           (let [s (- s (/ 2.625 2.75))]
             (+ i (* c (+ 0.984375 (* s s 7.5625))))))))))
 
+(defn music-on []
+  (.setMusicOnOff (.getElementById js/document "music") true))
+
+(defn music-off []
+  (.setMusicOnOff (.getElementById js/document "music") false))
+
+(defn sound-on []
+  (.setSoundOnOff (.getElementById js/document "music") true))
+
+(defn sound-off []
+  (.setSoundOnOff (.getElementById js/document "music") false))
+
+(defn play-sound [s]
+  (.playSound (.getElementById js/document "music") s))
+
 (defn by-id [entity-id]
   (first (filter #(= entity-id (:id %)) (:entities @app-state))))
 

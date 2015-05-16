@@ -670,7 +670,7 @@
                                                                              "\" height=\"" 1136
                                                                              "\" x=\"" 0
                                                                              "\" y=\"" 0
-                                                                             "\" xlink:href=\"" "img/block.jpg" "\" />")}
+                                                                             "\" xlink:href=\"" "img/start.png" "\" />")}
                                       :width 640
                                       :height 1136
                                       :onClick (fn [_] (put! game-chan {:load-level {:level (rand-nth [level-1
@@ -751,16 +751,16 @@
                                       (get data :score))))
 
                  ;; Inspector.
-                 (dom/div #js {:style #js {:float "left"
-                                           :width 400
-                                           :height 800}}
-;;                          (prn-str data)
+                 ;; (dom/div #js {:style #js {:float "left"
+;;                                            :width 400
+;;                                            :height 800}}
+;; ;;                          (prn-str data)
 
-                          (let [data @data
-                                no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
-                                no-chan-map (merge data {:entities no-chan-entities})]
-                            (dom/pre nil
-                                     (.stringify js/JSON (clj->js no-chan-map) nil 4))))
+;;                           (let [data @data
+;;                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
+;;                                 no-chan-map (merge data {:entities no-chan-entities})]
+;;                             (dom/pre nil
+;;                                      (.stringify js/JSON (clj->js no-chan-map) nil 4))))
                  ))))
   app-state
   {:target (. js/document (getElementById "app"))})

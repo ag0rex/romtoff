@@ -13,7 +13,7 @@
 (def app-state (atom {:tick 0
                           :entities []}))
 
-(defonce game-chan (chan))
+(def game-chan (chan))
 
 (defn linear [i t p d]
   (let [s (/ p d)]
@@ -529,9 +529,18 @@
                                                  (put! game-chan {:game-over {}})
                                                  (om/update! data :next-tetrimino (rand-nth tetriminos)))))
 
+                                           :game-win
+                                           (do
+                                             (om/update! data :game-over true)
+                                             (om/update! data :game-won true)
+                                             ;; (play-sound "gameWin")
+                                             )
+
                                            :game-over
                                            (do
-                                             (om/update! data :game-over true))
+                                             (om/update! data :game-over true)
+                                             ;; (play-sound "gameOver")
+                                             )
 
                                            :rotate-tetrimino
                                            (do
@@ -616,7 +625,7 @@
               lands (filter #(= :land (:type %)) entities)
               all-filled (every? #(< 0 (:stage %)) lands)]
           (when all-filled
-            (put! game-chan {:game-over {}})))
+            (put! game-chan {:game-win {}})))
 
         (dom/div nil
                  (dom/svg #js {:width 640

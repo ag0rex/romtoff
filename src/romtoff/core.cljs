@@ -657,29 +657,40 @@
                                         (get data :entities)))
 
                             (if (false? (get data :game-started))
-                              (dom/rect #js {:x 0 :y 0
-                                             :width 640 :height 1136
-                                             :style #js {:fill "rgb(250, 250, 200)"}
-                                             :onClick (fn [_] (put! game-chan {:load-level {:level (rand-nth [level-1
-                                                                                                              level-2
-                                                                                                              level-3
-                                                                                                              level-4
-                                                                                                              level-5])}}))})
+                              (dom/g {:dangerouslySetInnerHTML #js {:__html (str
+                                                                             "<image width=\"" 640
+                                                                             "\" height=\"" 1136
+                                                                             "\" x=\"" 0
+                                                                             "\" y=\"" 0
+                                                                             "\" xlink:href=\"" "img/block.jpg" "\" />")}
+                                      :width 640
+                                      :height 1136
+                                      :onClick (fn [_] (put! game-chan {:load-level {:level (rand-nth [level-1
+                                                                                                       level-2
+                                                                                                       level-3
+                                                                                                       level-4
+                                                                                                       level-5])}}))})
+
 
                               (if (true? (get data :game-won))
-                                (dom/text {:x 90
-                                           :y 167
-                                           :fill "red"
-                                           :font-family "Courier New"
-                                           :font-size 25
-                                           }
-                                          "LEVEL COMPLETED!")
-                                (dom/text {:x 90
-                                           :y 167
-                                           :fill "red"
-                                           :font-family "Courier New"
-                                           :font-size 25}
-                                          "GAME OVER!"))))
+                                (dom/g {:dangerouslySetInnerHTML #js {:__html (str
+                                                                             "<image width=\"" 640
+                                                                             "\" height=\"" 1136
+                                                                             "\" x=\"" 0
+                                                                             "\" y=\"" 0
+                                                                             "\" xlink:href=\"" "img/block-over.jpg" "\" />")}
+                                        :width 640
+                                        :height 1136
+                                      })
+                                (dom/g {:dangerouslySetInnerHTML #js {:__html (str
+                                                                             "<image width=\"" 640
+                                                                             "\" height=\"" 1136
+                                                                             "\" x=\"" 0
+                                                                             "\" y=\"" 0
+                                                                             "\" xlink:href=\"" "img/block-water.jpg" "\" />")}
+                                      :width 640
+                                      :height 1136
+                                      }))))
 
                           (when (and (false? (get data :game-over))
                                      (true? (get data :game-started)))

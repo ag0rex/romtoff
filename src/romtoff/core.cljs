@@ -737,16 +737,25 @@
                                                                                                        level-5])}}))})
 
                               (if (true? (get data :game-won))
-                                (dom/g {:dangerouslySetInnerHTML #js {:__html (str
-                                                                               "<image width=\"" 640
-                                                                               "\" height=\"" 1136
-                                                                               "\" x=\"" 0
-                                                                               "\" y=\"" 0
-                                                                               "\" xlink:href=\"" "img/win.png" "\" />")}
-                                        :width 640
-                                        :height 1136
-                                        :onClick (fn [_] (.reload (.-location js/window)))
-                                        })
+                                (dom/g nil
+                                       (dom/g {:dangerouslySetInnerHTML #js {:__html (str
+                                                                                          "<image width=\"" 640
+                                                                                          "\" height=\"" 1136
+                                                                                          "\" x=\"" 0
+                                                                                          "\" y=\"" 0
+                                                                                          "\" xlink:href=\"" "img/win.png" "\" />")}
+                                                   :width 640
+                                                   :height 1136
+                                                   :onClick (fn [_] (.reload (.-location js/window)))
+                                               })
+                                       (dom/text {:x 250
+                                                  :y 900
+                                                  :fill "white"
+                                                  :font-family "Courier New"
+                                                  :font-size 50}
+                                                 (get data :score))
+
+                                       )
                                 (dom/g {:dangerouslySetInnerHTML #js {:__html (str
                                                                                "<image width=\"" 640
                                                                                "\" height=\"" 1136

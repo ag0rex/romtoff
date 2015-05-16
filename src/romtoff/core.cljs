@@ -767,8 +767,16 @@
                                         :onClick (fn [_] (.reload (.-location js/window)))
                                         })))))
 
+                 (dom/div #js {:style #js {:float "left"
+                                           :width 400
+                                           :height 800}}
+                          ;;                          (prn-str data)
+                          (dom/img {:float "left"
+                                    :src "img/1.jpg"})
+                          )
+
                  ;; Inspector.
-                 ;; (dom/div #js {:style #js {:float "left"
+;;                  (dom/div #js {:style #js {:float "left"
 ;;                                            :width 400
 ;;                                            :height 800}}
 ;; ;;                          (prn-str data)

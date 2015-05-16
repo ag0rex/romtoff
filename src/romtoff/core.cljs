@@ -60,18 +60,7 @@
     (let [ch (:ch entity)]
       (put! ch message))))
 
-(def tetriminos [[[1]]
-
-                 [[1 1]]
-
-                 [[1 1 1]]
-
-                 [[1 1]
-                  [1 0]]
-
-                 [[1 1]
-                  [0 1]]
-
+(def tetriminos [
                  [[1 1 0]
                   [0 1 1]]
 
@@ -85,9 +74,6 @@
 
                  [[0 1 1]
                   [1 1 0]]
-
-                 [[0 1]
-                  [1 1]]
                  ])
 
 (def ROWS 13)
@@ -225,25 +211,14 @@
    1 "img/crate1.png"
    2 "img/crate2.png"})
 
-(def int->sprite
-  {
-   0 "img/0.png"
-   1 "img/1.png"
-   2 "img/2.png"
-   3 "img/3.png"
-   4 "img/4.png"
-   5 "img/5.png"
-   6 "img/6.png"
-   7 "img/7.png"
-   8 "img/8.png"
-   9 "img/9.png"
-   })
+(defn int->sprite [i]
+  (str "img/" i ".png"))
 
 (defn land [{:keys [id x y rotation ch animation sprite height width stage] :as data} owner]
   (build-sprite data owner
                 {:onClick (fn [_] (println id))}
                 {:next-state (fn [_]
-                               ;; (println "land" id stage)
+                               (println "land" id stage)
                                (let [stage (om/get-props owner :stage)]
                                  (case stage
                                    0 (do (tell id {:update {:sprite (stage->sprite 1) :stage 1}})
@@ -254,8 +229,7 @@
                                    2 (do (tell id {:update {:sprite (rand-nth ["img/10.png"
                                                                                "img/11.png"
                                                                                "img/12.png"]) :stage 0}})
-                                         (play-sound "rockDestroy"))))
-                               )}))
+                                         (play-sound "rockDestroy")))))}))
 
 (defn water [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
   (build-sprite data owner
@@ -267,7 +241,7 @@
 
 (defn arrow [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
   (build-sprite data owner
-                {:onClick (fn [_]
+                {:onMouseUp (fn [_]
                             (put! game-chan {:clear-selection {}})
 
                             (let
@@ -329,7 +303,7 @@
     m))
 
 (def level-1
-  [[0 0 0 0 0 0 0 0 0]
+  [[0 0 0 0 0 0 0 13 0]
    [0 0 0 0 0 0 0 0 0]
    [0 0 0 1 0 0 0 0 0]
    [0 0 1 1 1 1 1 0 0]
@@ -341,7 +315,7 @@
    [0 0 1 1 1 1 1 1 0]
    [0 0 0 0 0 0 0 0 0]
    [0 0 0 0 0 0 0 0 0]
-   [0 0 0 0 0 0 0 0 1]])
+   [20 21 20 20 21 20 21 21 21 20]])
 
 (def level-2
   [[0 0 0 0 1 0 0 0 0]
@@ -370,8 +344,8 @@
    [0 0 0 0 1 0 0 0 0]
    [0 0 0 0 1 0 0 0 0]
    [0 0 0 0 1 0 0 0 0]
-   [0 0 0 0 1 0 0 0 0]
-   [0 0 0 1 1 1 0 0 0]])
+   [19 0 0 0 1 0 0 0 0]
+   [14 0 0 1 1 1 0 0 0]])
 
 (def level-4
   [[9 5 5 6 6 6 5 5 8]
@@ -401,7 +375,7 @@
    [0 0 0 1 1 1 0 0 0]
    [0 0 0 1 0 1 0 0 0]
    [0 0 0 0 0 0 0 0 0]
-   [0 0 0 0 0 0 0 0 0]])
+   [20 21 20 20 21 20 21 21 21 20]])
 
 (defn is-land [r c level]
   (contains? #{1 2 3 4} (get-in level [r c])))
@@ -449,8 +423,9 @@
                                            :load-level
                                            (do
                                              (om/update! data :score 0)
-                                             (om/update! data :moves 20)
+                                             (om/update! data :moves 15)
                                              (om/update! data :game-over false)
+                                             (om/update! data :entities [])
 
                                              (let [level (:level contents)]
                                                (doseq [r (range (count level))
@@ -481,8 +456,10 @@
                                                                                       :y 0
                                                                                       :width 640
                                                                                       :height 1136
-                                                                                      :sprite "img/gui_640x1136.png"}))
-                                               ))
+                                                                                      :sprite "img/gui_640x1136.png"})))
+
+                                             (om/update! data :game-started true))
+
                                            :selection
                                            (do
                                                (let [[r c] (:current contents)]
@@ -531,14 +508,18 @@
 
                                            :game-win
                                            (do
-                                             (om/update! data :game-over true)
                                              (om/update! data :game-won true)
+                                             (om/update! data :game-over true)
+                                             ;; (om/update! data :game-started false)
+                                             ;; (put! game-chan {:game-over {}})
                                              ;; (play-sound "gameWin")
                                              )
 
                                            :game-over
                                            (do
                                              (om/update! data :game-over true)
+                                             ;; (om/update! data :game-started false)
+                                             ;; (put! game-chan {:load-level {:level level-1}})
                                              ;; (play-sound "gameOver")
                                              )
 
@@ -572,13 +553,9 @@
                                      :easing :cubic-out
                                      :when-done :new-ball}}})
 
-        (om/update! data :next-tetrimino (rand-nth tetriminos))
+        (om/update! data :game-started false)
 
-        (put! game-chan {:load-level {:level (rand-nth [level-1
-                                                        level-2
-                                                        level-3
-                                                        level-4
-                                                        level-5])}})
+        (om/update! data :next-tetrimino (rand-nth tetriminos))
 
         (js/setTimeout (fn [_]
                          (music-off)
@@ -621,10 +598,10 @@
                     (om/update! animation :current (get frames next-index))))))))
 
         ;; If map filled?
-        (let [entities (get @app-state :entities)
+        (let [entities (get data :entities)
               lands (filter #(= :land (:type %)) entities)
               all-filled (every? #(< 0 (:stage %)) lands)]
-          (when all-filled
+          (when (and (get data :game-started) all-filled)
             (put! game-chan {:game-win {}})))
 
         (dom/div nil
@@ -644,8 +621,9 @@
                                                   (when (not= new-selection current-selection)
                                                     (om/update! data [:selection :prev] current-selection)
                                                     (om/update! data [:selection :current] new-selection)
-                                                    (put! game-chan {:selection {:prev current-selection
-                                                                                 :current new-selection}})))
+                                                    (when (true? (get data :game-started))
+                                                      (put! game-chan {:selection {:prev current-selection
+                                                                                   :current new-selection}}))))
 
                                                 (when (get-in data [:mouse :down])
                                                   (let [{:keys [current prev]} (get data :mouse)
@@ -671,12 +649,40 @@
                                          :width 640 :height 1136
                                          :style #js {:fill "rgb(250, 250, 200)"}})
 
-                          (dom/g nil
-                                 (map (fn [{:keys [type] :as entity}]
-                                        (om/build builder entity {:init-state {:game-chan game-chan}}))
-                                      (get data :entities)))
+                          (if (and (false? (get data :game-over))
+                                   (true? (get data :game-started)))
+                            (dom/g nil
+                                   (map (fn [{:keys [type] :as entity}]
+                                          (om/build builder entity {:init-state {:game-chan game-chan}}))
+                                        (get data :entities)))
 
-                          (when (false? (get data :game-over))
+                            (if (false? (get data :game-started))
+                              (dom/rect #js {:x 0 :y 0
+                                             :width 640 :height 1136
+                                             :style #js {:fill "rgb(250, 250, 200)"}
+                                             :onClick (fn [_] (put! game-chan {:load-level {:level (rand-nth [level-1
+                                                                                                              level-2
+                                                                                                              level-3
+                                                                                                              level-4
+                                                                                                              level-5])}}))})
+
+                              (if (true? (get data :game-won))
+                                (dom/text {:x 90
+                                           :y 167
+                                           :fill "red"
+                                           :font-family "Courier New"
+                                           :font-size 25
+                                           }
+                                          "LEVEL COMPLETED!")
+                                (dom/text {:x 90
+                                           :y 167
+                                           :fill "red"
+                                           :font-family "Courier New"
+                                           :font-size 25}
+                                          "GAME OVER!"))))
+
+                          (when (and (false? (get data :game-over))
+                                     (true? (get data :game-started)))
                             (let [tetrimino (get data :next-tetrimino)
                                   offset-x 270
                                   offset-y 70
@@ -690,7 +696,8 @@
                                                  :width 20 :height 20
                                                  :style #js {:fill "rgb(250, 250, 200)"}})))))
 
-                          (when (false? (get data :game-over))
+                          (when (and (false? (get data :game-over))
+                                     (true? (get data :game-started)))
                             (dom/text {:x 90
                                        :y 167
                                        :fill "white"
@@ -698,7 +705,8 @@
                                        :font-size 25}
                                       (get data :moves)))
 
-                          (when (false? (get data :game-over))
+                          (when (and (false? (get data :game-over))
+                                     (true? (get data :game-started)))
                             (dom/text {:x 500
                                        :y 80
                                        :fill "white"
@@ -716,7 +724,7 @@
                                 no-chan-entities (reduce #(conj %1 (dissoc %2 :ch)) [] (:entities data))
                                 no-chan-map (merge data {:entities no-chan-entities})]
                             (dom/pre nil
-                                     (.stringify js/JSON (clj->js (:game-over no-chan-map)) nil 4))))
+                                     (.stringify js/JSON (clj->js no-chan-map) nil 4))))
                  ))))
   app-state
   {:target (. js/document (getElementById "app"))})

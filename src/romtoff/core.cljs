@@ -533,7 +533,10 @@
                                            (do
                                              (om/update! data :game-over true))
 
-                                           :rotate-tetrimino (om/transact! data :next-tetrimino rotate-left)
+                                           :rotate-tetrimino
+                                           (do
+                                             (om/transact! data :next-tetrimino rotate-left)
+                                             (play-sound "buttonClick"))
 
                                            :increase-score
                                            (do
@@ -562,7 +565,11 @@
 
         (om/update! data :next-tetrimino (rand-nth tetriminos))
 
-        (put! game-chan {:load-level {:level level-3}})
+        (put! game-chan {:load-level {:level (rand-nth [level-1
+                                                        level-2
+                                                        level-3
+                                                        level-4
+                                                        level-5])}})
 
         (js/setTimeout (fn [_]
                          (music-off)
@@ -688,9 +695,7 @@
                                        :fill "white"
                                        :font-family "Courier New"
                                        :font-size 25}
-                                      (get data :score)))
-
-                          )
+                                      (get data :score))))
 
                  ;; Inspector.
                  (dom/div #js {:style #js {:float "left"

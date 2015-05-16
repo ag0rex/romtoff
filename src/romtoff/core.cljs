@@ -487,8 +487,10 @@
                                                                                             "img/sageata02.png"
                                                                                             "img/sageata03.png"]
                                                                                    :duration 10}}
-                                                                      :water {:sprite "img/block.jpg"}
-                                                                      )]
+                                                                      :water {:animation {:frames ["img/sageata01.png"
+                                                                                                   "img/1-1.png"
+                                                                                                   "img/2-1.png"]
+                                                                                          :duration 10}})]
 
                                                          (println tetrimino-blocks-coords (:type (block-by-coords tbc)))
 
@@ -567,7 +569,7 @@
                          (music-on)
                          (sound-off)
                          (sound-on))
-                       2000))
+                       5000))
 
       om/IRenderState
       (render-state [_ {:keys [game-chan]}]
@@ -662,42 +664,9 @@
                             (dom/g nil
                                    (map (fn [{:keys [type] :as entity}]
                                           (om/build builder entity {:init-state {:game-chan game-chan}}))
-                                        (get data :entities)))
+                                        (get data :entities))))
 
-                            (if (false? (get data :game-started))
-                              (dom/g {:dangerouslySetInnerHTML #js {:__html (str
-                                                                             "<image width=\"" 640
-                                                                             "\" height=\"" 1136
-                                                                             "\" x=\"" 0
-                                                                             "\" y=\"" 0
-                                                                             "\" xlink:href=\"" "img/start.png" "\" />")}
-                                      :width 640
-                                      :height 1136
-                                      :onClick (fn [_] (put! game-chan {:load-level {:level (rand-nth [level-1
-                                                                                                       level-2
-                                                                                                       level-3
-                                                                                                       level-4
-                                                                                                       level-5])}}))})
 
-                              (if (true? (get data :game-won))
-                                (dom/g {:dangerouslySetInnerHTML #js {:__html (str
-                                                                             "<image width=\"" 640
-                                                                             "\" height=\"" 1136
-                                                                             "\" x=\"" 0
-                                                                             "\" y=\"" 0
-                                                                             "\" xlink:href=\"" "img/block-over.jpg" "\" />")}
-                                        :width 640
-                                        :height 1136
-                                      })
-                                (dom/g {:dangerouslySetInnerHTML #js {:__html (str
-                                                                             "<image width=\"" 640
-                                                                             "\" height=\"" 1136
-                                                                             "\" x=\"" 0
-                                                                             "\" y=\"" 0
-                                                                             "\" xlink:href=\"" "img/block-water.jpg" "\" />")}
-                                      :width 640
-                                      :height 1136
-                                      }))))
 
                           (when (and (false? (get data :game-over))
                                      (true? (get data :game-started)))
@@ -748,7 +717,46 @@
                                        :fill "white"
                                        :font-family "Courier New"
                                        :font-size 25}
-                                      (get data :score))))
+                                      (get data :score)))
+
+                          (if (not (and (false? (get data :game-over))
+                                        (true? (get data :game-started))))
+                            (if (false? (get data :game-started))
+                              (dom/g {:dangerouslySetInnerHTML #js {:__html (str
+                                                                             "<image width=\"" 640
+                                                                             "\" height=\"" 1136
+                                                                             "\" x=\"" 0
+                                                                             "\" y=\"" 0
+                                                                             "\" xlink:href=\"" "img/start.png" "\" />")}
+                                      :width 640
+                                      :height 1136
+                                      :onClick (fn [_] (put! game-chan {:load-level {:level (rand-nth [level-1
+                                                                                                       level-2
+                                                                                                       level-3
+                                                                                                       level-4
+                                                                                                       level-5])}}))})
+
+                              (if (true? (get data :game-won))
+                                (dom/g {:dangerouslySetInnerHTML #js {:__html (str
+                                                                               "<image width=\"" 640
+                                                                               "\" height=\"" 1136
+                                                                               "\" x=\"" 0
+                                                                               "\" y=\"" 0
+                                                                               "\" xlink:href=\"" "img/win.png" "\" />")}
+                                        :width 640
+                                        :height 1136
+                                        :onClick (fn [_] (.reload (.-location js/window)))
+                                        })
+                                (dom/g {:dangerouslySetInnerHTML #js {:__html (str
+                                                                               "<image width=\"" 640
+                                                                               "\" height=\"" 1136
+                                                                               "\" x=\"" 0
+                                                                               "\" y=\"" 0
+                                                                               "\" xlink:href=\"" "img/moves.png" "\" />")}
+                                        :width 640
+                                        :height 1136
+                                        :onClick (fn [_] (.reload (.-location js/window)))
+                                        })))))
 
                  ;; Inspector.
                  ;; (dom/div #js {:style #js {:float "left"

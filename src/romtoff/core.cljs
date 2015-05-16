@@ -128,8 +128,6 @@
 (defn rotate-left [t]
   (reduce (fn [acc index] (conj acc (vec (map #(get % index) t)))) [] (reverse (range (count (first t))))))
 
-(println (rotate-left [[0 1]
-                       [1 1]]))
 
 (defn build-sprite [{:keys [id x y rotation ch animation sprite height width] :as data} owner event-handlers message-handlers]
   (reify
@@ -218,7 +216,7 @@
   (build-sprite data owner
                 {:onClick (fn [_] (println id))}
                 {:next-state (fn [_]
-                               (println "land" id stage)
+                               ;; (println "land" id stage)
                                (let [stage (om/get-props owner :stage)]
                                  (case stage
                                    0 (do (tell id {:update {:sprite (stage->sprite 1) :stage 1}})
@@ -482,18 +480,25 @@
                                                  (let [tetrimino-blocks-coords (tetrimino-coords t c)]
                                                    ;; Selection must be inside map.
                                                    (when (every? #(in-bounds %) tetrimino-blocks-coords)
-
                                                      (doseq [[r c :as tbc] tetrimino-blocks-coords]
-                                                       (add-entity data (from-default-entity {:id (keyword (str "arrow-" r "-" c))
-                                                                                              :type :arrow
-                                                                                              :x (+ X-IN-OFFSET (* c 70))
-                                                                                              :y (+ Y-IN-OFFSET (* r 70))
-                                                                                              :height 70
-                                                                                              :width 70
-                                                                                              :animation {:frames ["img/sageata01.png"
-                                                                                                                   "img/sageata02.png"
-                                                                                                                   "img/sageata03.png"]
-                                                                                                          :duration 10}}))))
+                                                       (let [block-type (:type (block-by-coords tbc))
+                                                             visual (case block-type
+                                                                      :land {:animation {:frames ["img/sageata01.png"
+                                                                                            "img/sageata02.png"
+                                                                                            "img/sageata03.png"]
+                                                                                   :duration 10}}
+                                                                      :water {:sprite "img/block.jpg"}
+                                                                      )]
+
+                                                         (println tetrimino-blocks-coords (:type (block-by-coords tbc)))
+
+                                                         (add-entity data (from-default-entity (merge  {:id (keyword (str "arrow-" r "-" c))
+                                                                                                        :type :arrow
+                                                                                                        :x (+ X-IN-OFFSET (* c 70))
+                                                                                                        :y (+ Y-IN-OFFSET (* r 70))
+                                                                                                        :height 70
+                                                                                                        :width 70
+                                                                                                        } visual))))))
                                                    ;; (println tetrimino-blocks-coords)
                                                    )))
 
@@ -673,7 +678,6 @@
                                                                                                        level-3
                                                                                                        level-4
                                                                                                        level-5])}}))})
-
 
                               (if (true? (get data :game-won))
                                 (dom/g {:dangerouslySetInnerHTML #js {:__html (str

@@ -489,7 +489,17 @@
                                                                                           :y (+ Y-IN-OFFSET (* r 70))
                                                                                           :height 70
                                                                                           :width 70
-                                                                                          :sprite (int->sprite (get-in level [r c]))})))))
+                                                                                          :sprite (int->sprite (get-in level [r c]))}))))
+
+                                               (add-entity data (from-default-entity {:id :gui
+                                                                                      :type :sprite
+                                                                                      :x 0
+                                                                                      :y 0
+                                                                                      :width 640
+                                                                                      :height 1136
+                                                                                      :sprite "img/gui_640x1136.png"}))
+
+                                               )
                                              )
                                            :selection
                                            (do

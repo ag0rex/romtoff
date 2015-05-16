@@ -417,6 +417,8 @@
 
 (def X-OFFSET 8)
 (def Y-OFFSET 8)
+(def X-IN-OFFSET 5)
+(def Y-IN-OFFSET 221)
 (def TILE-WIDTH 70)
 (def TILE-HEIGHT 70)
 
@@ -435,7 +437,7 @@
         (add-entity data (from-default-entity {:id :rotate-button
                                                :type :rotate-button
                                                :x 10
-                                               :y 1000
+                                               :y 10
                                                :width 100
                                                :height 100
                                                :sprite "img/block-over.jpg"}))
@@ -472,8 +474,8 @@
                                                  (if (is-land r c level)
                                                    (add-entity data (from-default-entity {:id (block-id r c)
                                                                                           :type :land
-                                                                                          :x (* c 70)
-                                                                                          :y (* r 70)
+                                                                                          :x (+ X-IN-OFFSET (* c 70))
+                                                                                          :y (+ Y-IN-OFFSET (* r 70))
                                                                                           :height 70
                                                                                           :width 70
                                                                                           :sprite (rand-nth ["img/10.png"
@@ -483,8 +485,8 @@
 
                                                    (add-entity data (from-default-entity {:id (block-id r c)
                                                                                           :type :water
-                                                                                          :x (* c 70)
-                                                                                          :y (* r 70)
+                                                                                          :x (+ X-IN-OFFSET (* c 70))
+                                                                                          :y (+ Y-IN-OFFSET (* r 70))
                                                                                           :height 70
                                                                                           :width 70
                                                                                           :sprite (int->sprite (get-in level [r c]))})))))
@@ -515,11 +517,14 @@
                                                      (doseq [[r c :as tbc] tetrimino-blocks-coords]
                                                        (add-entity data (from-default-entity {:id (keyword (str "arrow-" r "-" c))
                                                                                               :type :arrow
-                                                                                              :x (* c 70)
-                                                                                              :y (* r 70)
+                                                                                              :x (+ X-IN-OFFSET (* c 70))
+                                                                                              :y (+ Y-IN-OFFSET (* r 70))
                                                                                               :height 70
                                                                                               :width 70
-                                                                                              :sprite "img/sageata.png"}))))
+                                                                                              :animation {:frames ["img/sageata01.png"
+                                                                                                                   "img/sageata02.png"
+                                                                                                                   "img/sageata03.png"]
+                                                                                                          :duration 10}}))))
                                                    ;; (println tetrimino-blocks-coords)
                                                    )))
 
@@ -625,8 +630,8 @@
                                                 (om/update! data [:mouse :current] {:x x :y y})
 
                                                 ;; Selection.
-                                                (let [new-selection [(quot (- y Y-OFFSET) TILE-HEIGHT)
-                                                                     (quot (- x X-OFFSET) TILE-WIDTH)]
+                                                (let [new-selection [(quot (- y Y-OFFSET Y-IN-OFFSET) TILE-HEIGHT)
+                                                                     (quot (- x X-OFFSET X-IN-OFFSET) TILE-WIDTH)]
                                                       current-selection (get-in data [:selection :current])]
                                                   (when (not= new-selection current-selection)
                                                     (om/update! data [:selection :prev] current-selection)

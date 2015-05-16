@@ -559,7 +559,7 @@
 
         (js/setTimeout (fn [_]
                          (music-off)
-                         ;; (music-on)
+                         (music-on)
                          (sound-off)
                          (sound-on))
                        2000))
@@ -600,9 +600,12 @@
         ;; If map filled?
         (let [entities (get data :entities)
               lands (filter #(= :land (:type %)) entities)
+              filled (filter #(< 0 (:stage %)) lands)
               all-filled (every? #(< 0 (:stage %)) lands)]
-          (when (and (get data :game-started) all-filled)
-            (put! game-chan {:game-win {}})))
+          (when (get data :game-started)
+            (om/update! data :progress {:current (count filled) :target (count lands)})
+            (when all-filled
+              (put! game-chan {:game-win {}}))))
 
         (dom/div nil
                  (dom/svg #js {:width 640
@@ -709,8 +712,17 @@
 
                           (when (and (false? (get data :game-over))
                                      (true? (get data :game-started)))
-                            (dom/text {:x 90
-                                       :y 167
+                            (dom/text {:x 92
+                                       :y 76
+                                       :fill "white"
+                                       :font-family "Courier New"
+                                       :font-size 25}
+                                      "?"))
+
+                          (when (and (false? (get data :game-over))
+                                     (true? (get data :game-started)))
+                            (dom/text {:x 92
+                                       :y 161
                                        :fill "white"
                                        :font-family "Courier New"
                                        :font-size 25}
@@ -719,7 +731,16 @@
                           (when (and (false? (get data :game-over))
                                      (true? (get data :game-started)))
                             (dom/text {:x 500
-                                       :y 80
+                                       :y 161
+                                       :fill "white"
+                                       :font-family "Courier New"
+                                       :font-size 25}
+                                      (str (get-in data [:progress :current]) "/" (get-in data [:progress :target]))))
+
+                          (when (and (false? (get data :game-over))
+                                     (true? (get data :game-started)))
+                            (dom/text {:x 500
+                                       :y 76
                                        :fill "white"
                                        :font-family "Courier New"
                                        :font-size 25}

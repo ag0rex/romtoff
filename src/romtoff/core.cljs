@@ -284,13 +284,6 @@
                             )}
                 {}))
 
-(defn rotate-button [{:keys [id x y rotation ch animation sprite height width] :as data} owner]
-  (build-sprite data owner
-                {:onClick (fn [_]
-                            (put! game-chan {:rotate-tetrimino {}})
-                            "")}
-                {}))
-
 (defn falling-circle [{:keys [ch x y] :as data} owner]
   (reify
     om/IWillMount
@@ -327,8 +320,6 @@
 (defmethod builder :water [data owner] (water data owner))
 
 (defmethod builder :arrow [data owner] (arrow data owner))
-
-(defmethod builder :rotate-button [data owner] (rotate-button data owner))
 
 (defmethod builder :falling-circle [data owner] (falling-circle data owner))
 
@@ -433,15 +424,6 @@
       (will-mount [_]
         (js/setInterval #(om/transact! data :tick inc) 34)
 
-
-        (add-entity data (from-default-entity {:id :rotate-button
-                                               :type :rotate-button
-                                               :x 10
-                                               :y 10
-                                               :width 100
-                                               :height 100
-                                               :sprite "img/block-over.jpg"}))
-
         ;; (doseq [r (range ROWS)
         ;;         c (range COLS)]
         ;;   (let [id (block-id r c)]
@@ -498,9 +480,7 @@
                                                                                       :width 640
                                                                                       :height 1136
                                                                                       :sprite "img/gui_640x1136.png"}))
-
-                                               )
-                                             )
+                                               ))
                                            :selection
                                            (do
                                                (let [[r c] (:current contents)]
@@ -631,8 +611,7 @@
         (dom/div nil
                  (dom/svg #js {:width 640
                                :height 1136
-                               :style #js {:float "left"
-                                           :border "1px solid lightgray"}
+                               :style #js {:float "left"}
                                :onMouseMove (fn [e]
                                               (let [x (.-pageX e)
                                                     y (.-pageY e)]
@@ -661,7 +640,12 @@
                                               (om/update! data [:mouse :down] {:x (.-pageX e) :y (.-pageY e)}))
 
                                :onMouseUp (fn [e]
-                                            (om/update! data [:mouse :down] false))}
+                                            (om/update! data [:mouse :down] false))
+                               :onClick (fn [e] (let [x (.-pageX e)
+                                                      y (.-pageY e)]
+                                                  (if (and (< 200 x 400)
+                                                           (< 30 y 200))
+                                                    (put! game-chan {:rotate-tetrimino {}}))))}
 
                           (dom/rect #js {:x 0 :y 0
                                          :width 640 :height 1136
